@@ -4,6 +4,9 @@
 /// Ce fichier contient les entetes de fonction et d'autre definitions globales
 /// necessare au project
 
+/// Inclusion
+#include "../libs/debugger/debug.h"
+
 /// Typedefs
 
 /// Olivier
@@ -48,9 +51,17 @@ int writeWood(Wood_t);
 /// Programmation du mode operation (asservissement, anti-recul)
 void setSawSpeed(int);
 int readSawSpeed();
+int readWoodSpeed();
 Wood_t readWood(int);
 
 /// Journalisation
+void serialSemaphoreTakeHook();
+void serialSemaphoreGiveHook();
+void logfileSemaphoreTakeHook();
+void logfileSemaphoreGiveHook();
+void logfilePrintHook(char *);
+void serialPrintHook(char *);
+void panicKillHook();
 
 /// Yanick
 
