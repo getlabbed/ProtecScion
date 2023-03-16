@@ -4,6 +4,20 @@
 /// Ce fichier contient les entetes de fonction et d'autre definitions globales
 /// necessare au project
 
+/// Typedefs
+
+/// Olivier
+typedef struct {
+  char name[16]; // nom du bois
+  int code;      // code du bois
+  int sawSpeed;  // vitesse de la lame
+  int feedRate;  // vitesse d'avancement
+} Wood_t;
+
+/// Yanick
+
+/// Entetes de fonctions
+
 /// Olivier
 
 /// Affichage de la temperature du bois
@@ -13,9 +27,13 @@ float readTemperatureWood();
 enum lightColors { Red = 1, Green = 2, Blue = 4 };
 void setLightIndicator(lightColors);
 
-/// Programmation du mode operation (asservissement, anti-recul)
-
 /// Programmation du mode manuel
+int writeWood(Wood_t);
+
+/// Programmation du mode operation (asservissement, anti-recul)
+void setSawSpeed(int);
+int readSawSpeed();
+Wood_t readWood(int);
 
 /// Journalisation
 
