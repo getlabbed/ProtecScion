@@ -9,7 +9,7 @@
 
 /// Typedefs
 
-/// Olivier
+/// ===================== Olivier =====================
 typedef struct MenuOption_t MenuOption_t;
 struct MenuOption_t {
   char name[16];                           // nom de l'option
@@ -23,7 +23,7 @@ typedef struct {
   MenuOption_t options[10]; // liste d'options
 } Menu_t;
 
-typedef Menu_t *MenuStack_t; // definition de la pile pour la navigation
+typedef Menu_t *MenuStack_t; // définition de la pile pour la navigation
 
 typedef struct {
   char name[16]; // nom du bois
@@ -32,13 +32,18 @@ typedef struct {
   int feedRate;  // vitesse d'avancement
 } Wood_t;
 
-/// Yanick
+/// ===================== Yanick =====================
 
-/// Entetes de fonctions
+/// Structure qui contient les données a mettre à jour sur l'écran LCD
 
-/// Olivier
+typedef struct {
+    int iDb;
+    float fAmbiantHumidTemp;
+} LCDParams_t;
 
-/// Affichage de la temperature du bois
+/// ===================== Olivier =====================
+
+/// Affichage de la température du bois
 float readTemperatureWood();
 
 /// Programmation des indicateurs lumineux
@@ -48,7 +53,7 @@ void setLightIndicator(lightColors);
 /// Programmation du mode manuel
 int writeWood(Wood_t);
 
-/// Programmation du mode operation (asservissement, anti-recul)
+/// Programmation du mode opération (asservissement, anti-recul)
 void setSawSpeed(int);
 int readSawSpeed();
 int readWoodSpeed();
@@ -63,12 +68,24 @@ void logfilePrintHook(char *);
 void serialPrintHook(char *);
 void panicKillHook();
 
-/// Yanick
+/// ===================== Yanick =====================
 
 /// Programmation du mode modification
 
+void vModificationMode(Wood_t name);
+
 /// Programmation du mode apprentissage
 
-/// Afficher le niveau sonore en dB
+void vTaskLearningMode(); // * On doit ajouter le storage* en ce moment on a juste wood_t
 
-/// Afficher la temperature et l'humidite ambiante
+/// Mettre à jour le niveau sonore en dB
+
+void vTaskUpdateDb(void);
+
+/// Mettre à jour la température et l'humidité ambiante
+
+void vTaskUpdateAmbiantHumidTemp(void);
+
+/// Mettre à jour l'écran LCD
+
+void vTaskUpdateLCD(void *pvParameters)
