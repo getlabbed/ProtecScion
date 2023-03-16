@@ -7,6 +7,21 @@
 /// Typedefs
 
 /// Olivier
+typedef struct MenuOption_t MenuOption_t;
+struct MenuOption_t {
+  char name[16];                           // nom de l'option
+  char value[8];                           // valeur de l'option
+  void *params;                            // donnees optionnelles
+  int (*hookFunction)(MenuOption_t *self); // fonction executee lors d'un click
+};
+
+typedef struct {
+  char *name[16];           // nom du menu
+  MenuOption_t options[10]; // liste d'options
+} Menu_t;
+
+typedef Menu_t *MenuStack_t; // definition de la pile pour la navigation
+
 typedef struct {
   char name[16]; // nom du bois
   int code;      // code du bois
