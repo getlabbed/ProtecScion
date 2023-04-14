@@ -18,13 +18,16 @@
 
 // Importation des bibliothèques
 #include <Adafruit_MLX90614.h>
-#include <Adafruit_LiquidCrystal.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
 #include <freertos/task.h>
 #include <Adafruit_NeoPixel.h>
 
-#include "menus.h";
+#include <Keypad.h>
+#include <PID_v1.h>
+#include <ArduinoJson.h>
+
+#include "src/menus.h";
 
 // Importation des bibliothèques pour le système de fichiers
 #include <FS.h>
@@ -35,13 +38,11 @@
 #include <TinyStreaming.h>
 #include <TinyString.h>
 
-#include <Keypad.h>
-
-#include <PID_v1.h>
-
-#include <ArduinoJson.h>
-
 // Déclaration des Handlers
+
+TaskHandle_t HandleKeypad;
+TaskHandle_t HandleSawControl;
+TaskHandle_t HandleLearningMode;
 TaskHandle_t HandleUpdateLCD;
 TaskHandle_t HandleUpdateDb;
 TaskHandle_t HandleUpdateAmbiantHumidTemp;
@@ -56,20 +57,20 @@ QueueHandle_t xQueueLightIndicator;
 
 // ===================================== Définition des constantes ===============================================
 
-#define TASK_STACK_SIZE 2048  // Taille allouée de la pile pour les tâches RTOS ()
+#define TASK_STACK_SIZE 2048	// Taille allouée de la pile pour les tâches RTOS ()
 #define VOLTAGE_REFERENCE 3.3 // Tension de rérérence pour le ESP32 Feather
 
-#define TEMPERATURE_PIN 2	  // Broche de la température ambiante
-#define HUMIDITY_PIN 3		  // Broche de l'humidité ambiante
-#define SOUND_SENSOR_PIN 4	  // Broche du niveau sonore
+#define TEMPERATURE_PIN 2			// Broche de la température ambiante
+#define HUMIDITY_PIN 3				// Broche de l'humidité ambiante
+#define SOUND_SENSOR_PIN 4		// Broche du niveau sonore
 #define LIGHT_INDICATOR_PIN 5 // Broche de l'indicateur lumineux
-#define SAW_INPUT_PIN 6		  // Broche d'entrée de la vitesse de la scie
-#define SAW_OUTPUT_PIN 7      // Broche de sortie PWM pour la vitesse de la scie
+#define SAW_INPUT_PIN 6				// Broche d'entrée de la vitesse de la scie
+#define SAW_OUTPUT_PIN 7			// Broche de sortie PWM pour la vitesse de la scie
 
 // ================================== Définition des variables globales ==========================================
 
 // Définition des variables pour le PID
-double dWantedSawSpeed, dSawInput, dSawOutput; 
+double dWantedSawSpeed, dSawInput, dSawOutput;
 double Kp = 2, Ki = 5, Kd = 1;
 
 int sumSawSpeed, readingCount; // Définition des variables pour le calcul de la vitesse moyenne de la scie
@@ -93,17 +94,18 @@ byte colPins[COLS] = {5, 4, 3, 2};
 Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
 
 // ------------------------------------ Initialisation du menu ---------------------------------------
-Menu *menu;
+Menu_t *menu;
 
 /**
  * Nom de la tâche :
  *  @name vCreateTaskShowAlert
  * Description de la tâche :
  *  @brief Tâche permettant l'initialisation de la tâche vTaskShowAlert
- * 
+ *
  * Paramètre(s) d'entrée :
- *  @param pvParameters Paramètres de la tâche
- *  
+ *  @param sAlertText Texte de l'alerte
+ *  @param uiAlertDuration Durée de l'alerte
+ *
  * Valeur de retour :
  *  @return void
  * Note(s) :
@@ -112,12 +114,12 @@ Menu *menu;
  * Historique :
  *  @date 2021-04-13 @author Olivier David Laplante - Entrée initiale du code.
  */
-void vCreateTaskShowAlert(char *pcAlertText, uint8_t uiAlertDuration)
+void vCreateTaskShowAlert(String sAlertText, uint8_t uiAlertDuration)
 {
 	AlertParams_t *alertParams = (AlertParams_t *)malloc(sizeof(AlertParams_t));
-	alertParams->message = pcAlertText;
-	alertParams->duration = uiAlertDuration;
-	xTaskCreatePinnedToCore(vTaskShowAlert, "vTaskShowAlert", TASK_STACK_SIZE, alertParams, 5, NULL, 1);
+	alertParams->sText = sAlertText;
+	alertParams->u8DurationMs = uiAlertDuration;
+	xTaskCreatePinnedToCore(vTaskShowAlert, "vTaskShowAlert", TASK_STACK_SIZE, alertParams, 2, NULL, 1);
 }
 
 /**
@@ -125,10 +127,10 @@ void vCreateTaskShowAlert(char *pcAlertText, uint8_t uiAlertDuration)
  *  @name vTaskShowAlert
  * Description de la tâche	 :
  *  @brief Tâche permettant d'afficher une alerte sur l'écran LCD utisant "menus.h"
- * 
+ *
  * Paramètre(s) d'entrée :
- *  @param pvParameters Paramètres de la tâche
- *  
+ *  @param alertParams Paramètres de l'alerte
+ *
  * Valeur de retour :
  *  @return void
  * Note(s) :
@@ -137,56 +139,21 @@ void vCreateTaskShowAlert(char *pcAlertText, uint8_t uiAlertDuration)
  * Historique :
  *  @date 2021-04-13 @author Olivier David Laplante - Entrée initiale du code.
  */
-void vTaskShowAlert(void *pvParameters)
+void vTaskShowAlert(AlertParams_t *alertParams)
 {
-	AlertParams_t *alertParams = (AlertParams_t *)pvParameters;
-	menu->showAlert((char*)alertParams->message, (uint8_t)alertParams->duration);
+	menu->showAlert(alertParams->sText, alertParams->u8DurationMs);
 }
 
-/**
- * Nom de la tâche :
- *  @name vTaskReadTemueWood
- * Description de la tâche :
- *  @brief Tâche permettant de lire la température du bois
- * 
- * Paramètre(s) d'entrée :
- *  @param pvParameters Paramètres de la tâche
- *  
- * Valeur de retour :
- *  @return void
- * Note(s) :
- *  @note aucune(s)
- *
- * Historique :
- *  @date 2021-04-13 @author Olivier David Laplante - Entrée initiale du code.
- */
-void vTaskReadTemueWood(void *pvParameters)
-{
-	Adafruit_MLX90614 xIRWoodTempReader = Adafruit_MLX90614();
-	double dWoodTemp = 20;
-
-	if (!xIRWoodTempReader.begin())
-	{
-		// Erreur de communication avec le capteur
-	}
-
-	while (1)
-	{
-		dWoodTemp = xIRWoodTempReader.readObjectTempC();
-
-		xQueueSend(xQueueWoodTemp, &dWoodTemp, pdMS_TO_TICKS(1000));
-	}
-}
 
 /**
  * Nom de la tâche :
  *  @name vTasklightIndicator
  * Description de la tâche :
  *  @brief Tâche permettant de mettre à jour l'indicateur lumineux
- * 
+ *
  * Paramètre(s) d'entrée :
  *  @param pvParameters Paramètres de la tâche
- *  
+ *
  * Valeur de retour :
  *  @return void
  * Note(s) :
@@ -207,15 +174,15 @@ void vTaskSetLightIndicator(void *pvParameters)
 	{
 		if (!xQueueReceive(xQueueLightIndicator, color, portMAX_DELAY))
 			continue;
-		if (*color == Red)
+		if (*color == Red) // Si la couleur est rouge
 		{
 			xLightIndicator.setPixelColor(0, xLightIndicator.Color(255, 0, 0));
 		}
-		else if (*color == Green)
+		else if (*color == Green) // si la couleur est verte
 		{
 			xLightIndicator.setPixelColor(0, xLightIndicator.Color(0, 255, 0));
 		}
-		else if (*color == Blue)
+		else if (*color == Blue) // si la couleur est bleu
 		{
 			xLightIndicator.setPixelColor(0, xLightIndicator.Color(0, 0, 255));
 		}
@@ -227,10 +194,10 @@ void vTaskSetLightIndicator(void *pvParameters)
  *  @name vTasklearningMode
  * Description de la tâche :
  *  @brief Tâche permettant d'activer le mode apprentissage
- * 
+ *
  * Paramètre(s) d'entrée :
  *  @param pvParameters Paramètres de la tâche
- *  
+ *
  * Valeur de retour :
  *  @return void
  * Note(s) :
@@ -268,17 +235,17 @@ void vTasklearningMode(void *pvParameters)
 			}
 		}
 	}
-} 
+}
 
 /**
  * Nom de la tâche :
  *  @name vTaskSawControl
  * Description de la tâche :
  *  @brief Tâche permettant de contrôler la vitesse de la scie (Mode opération)
- * 
+ *
  *  Paramètre(s) d'entrée :
  *  1. @param pvParameters : paramètres de la tâches
- *  
+ *
  * Valeur de retour :
  *  @return void
  * Note(s) :
@@ -293,12 +260,12 @@ void vTaskSawControl(void *pvParameters)
 	// Aller chercher la valeur de la vitesse de la scie dans le fichier de configuration
 
 	dWantedSawSpeed = readWood(id).sawSpeed; // Définir la vitesse désirée de la scie (0-4095)
-	dfeedRate = readWood(id).feedRate;			 // Définir la vitesse d'avancement du bois
+	dfeedRate = readWood(id).feedRate;	     // Définir la vitesse d'avancement du bois
 
 	// Configuration du PID
 	myPID.SetMode(AUTOMATIC);
-	myPID.SetOutputLimits(0, 4095); // Set the output limits to match the saw speed range
-	myPID.SetSampleTime(50);				// Set the PID sample time in milliseconds
+	myPID.SetOutputLimits(0, 4095);
+	myPID.SetSampleTime(50);
 
 	while (true)
 	{
@@ -319,10 +286,10 @@ void vTaskSawControl(void *pvParameters)
  *  @name readWood
  * Description de la fonction :
  *  @brief Fonction permettant de convertir un id de bois en un objet de type Wood_t
- * 
+ *
  *  Paramètre(s) d'entrée :
  *  1. @param id Id du bois
- *  
+ *
  * Valeur de retour :
  *  @return wood_t
  * Note(s) :
@@ -360,6 +327,9 @@ Wood_t readWood(int id)
 				wood.feedRate = woodObj["feedRate"].as<int>();
 				break;
 			}
+			else{
+				return false; // Retourner faux si le bois n'est pas trouvé
+			}
 		}
 	}
 	else
@@ -375,12 +345,12 @@ Wood_t readWood(int id)
  *  @name writeWood
  * Description de la fonction :
  *  @brief Fonction permettant d'écrire les données d'un bois
- * 
+ *
  *  Paramètre(s) d'entrée :
  *  1. @param id Id du bois
  *  2. @param sawSpeed Vitesse de la scie
  *  3. @param feedRate Vitesse d'avancement du bois
- *  
+ *
  * Valeur de retour :
  *  @return void
  * Note(s) :
@@ -431,18 +401,17 @@ void writeWood(int id, int sawSpeed, int feedRate)
 	}
 }
 
-
 /**
  * Nom de la fonction :
  *  @name updateWood
  * Description de la fonction :
  *  @brief Fonction permettant de mettre à jour les données d'un bois
- * 
+ *
  *  Paramètre(s) d'entrée :
  *  1. @param id Id du bois
  *  2. @param sawSpeed Vitesse de la scie
  *  3. @param feedRate Vitesse d'avancement du bois
- *  
+ *
  * Valeur de retour :
  *  @return void
  * Note(s) :
@@ -491,15 +460,17 @@ void updateWood(int id, int sawSpeed, int feedRate)
 	}
 }
 
+void v
+
 /**
  * Nom de la tâche :
  *  @name vTaskKeypad
  * Description de la tâche :
  *  @brief Tâche permettant de gérer le clavier
- * 
+ *
  *  Paramètre(s) d'entrée :
  *  1. @param pvParameters : paramètres de la tâches
- *  
+ *
  * Valeur de retour :
  *  @return void
  * Note(s) :
@@ -511,122 +482,156 @@ void updateWood(int id, int sawSpeed, int feedRate)
 void vTaskKeypad(void *pvParameters)
 {
 	keypad.setDebounceTime(20);
-	// id variable to store the wood id
-	int iInput = 0;
-	char cpTextInput[10];
-	// wood variable to store the wood object
+	
 	Wood_t wood;
 
 	keypad.addEventListener([](char key) {
 		if (!keypad.isPressed(key))
 			return;
-		if (isDigit(key))
-		{
-			if (menuState == Prompting)
-			{
-				
+
+		if (isDigit(key)) {
+			if (menu->MenuState == PromptWoodId || menu->MenuState == PromptSawSpeed || menu->MenuState == PromptFeedRate) {
+				menu->vPromptAppend(key);
 			}
-		}
-		else if (isAlpha(key))
-		{ // s'assurer que la touche est une lettre (Modes)
-			if (menuState == Prompting)
-			{
-				// check if the id is valid and get the wood object
-				if (id >= 0 && id <= 9)
-				{
-					wood = readWood(id);
-					menuState = Selecting;
-				}
-				if (key == 'D') // === Mode opération ===
-				{ 
-					if (wood.code == -1)
-					{
-						id = 0;
-						menuState = Prompting;
+		} else if (isAlpha(key)) { // s'assurer que la touche est une lettre (Modes) (A, B, C, D)
+			// si la touche est D et que le menu est en mode promptSawSpeed ou promptFeedRate
+
+			// si le menu est en mode prompt
+			if (menu->MenuState == PromptWoodId) {
+				wood = readWood(menu->sPromptGetInput().toInt());
+				// si la touche est A
+				if (key == 'A') { // Mode modification
+					if(!wood) {
+						vCreateTaskShowAlert("Bois introuvable", 1000);
 						return;
 					}
-					// Commencer le mode opération
-					xTaskCreatePinnedToCore(vTaskSawControl, "SawControl", TASK_STACK_SIZE, NULL, 1, &xSawControlHandle, 0);
+					menu->vPromptClear();
+					menu->MenuState = PromptSawSpeed;
+				} else if (key == 'B') { // Mode manuel
+					if(wood) {
+						vCreateTaskShowAlert("Bois déjà existant", 1000);
+						return;
+					}
+					wood = {menu->sPromptGetInput().toInt(), "CREATE", 0, 0};
+					menu->vPromptClear();
+					menu->MenuState = PromptSawSpeed;
+				} else if (key == 'C') { // Mode apprentissage
+				  if(!wood) {
+						vCreateTaskShowAlert("Bois introuvable", 1000);
+						return;
+					}
+					
+					menu->vPromptClear();
+
+					menu->vShowMenu(wood.name);
+					wood = false;
+
+					// créer la tâche d'apprentissage
+					xTaskCreatePinnedToCore(vTasklearningMode, "Mode apprentissage", TASK_STACK_SIZE, NULL, 2, &HandleLearningMode, 0);	
+					menu->MenuState = Learning;
+				} else if (key == 'D') { // Mode opération
+					if(!wood) {
+						vCreateTaskShowAlert("Bois introuvable", 1000);
+						return;
+					}
+					menu->vPromptClear();
+				
+					menu->vShowMenu(wood.name);
+					wood = false;
+					// créer la tâche d'opération
+					xTaskCreatePinnedToCore(vTaskSawControl, "Mode opération", TASK_STACK_SIZE, NULL, 2, &HandleSawControl, 0);
+					menu->MenuState = Operation;
 				}
-				else if (key == 'C') // === Mode apprentissage ===
-				{ 
-					id = 0;
-					menuState = Prompting;
-					return;
+			} else if(menu->MenuState == PromptSawSpeed) {
+				// si la touche est D, passer au promptFeedRate
+				if (key == 'D') {
+					// verifier si le prompt est valide
+					if(menu->sPromptGetInput().toInt() < 0 || menu->sPromptGetInput().toInt() > 100) {
+						vCreateTaskShowAlert("Valeur invalide", 1000);
+						return;
+					}
+					
+					// modifier le bois
+					wood.sawSpeed = menu->sPromptGetInput().toInt();
+					menu->vPromptClear();
+
+					menu->MenuState = PromptFeedRate;
+				} else if (key == 'A') {
+					wood = false;
+					menu->vPromptClear();
+					menu->MenuState = PromptWoodId;
 				}
-				// Commencer le mode apprentissage
-				xTaskCreatePinnedToCore(vTaskLearningMode, "LearningMode", TASK_STACK_SIZE, NULL, 1, &xLearningModeHandle, 0);
+			} else if(menu->MenuState == PromptFeedRate) {
+				// si la touche est D, passer au promptFeedRate
+				if (key == 'D') {
+					// verifier si le prompt est valide
+					if(menu->sPromptGetInput().toInt() < 0 || menu->sPromptGetInput().toInt() > 100) {
+						vCreateTaskShowAlert("Valeur invalide", 1000);
+						return;
+					}
+
+					// modifier le bois
+					wood.feedRate = menu->sPromptGetInput().toInt();
+					menu->vPromptClear();
+
+					// sauvegarder le bois
+					if (wood.name == "CREATE") {
+						writeWood(wood.id, wood.sawSpeed, wood.feedRate);
+					} else {
+						updateWood(wood.id, wood.sawSpeed, wood.feedRate);
+					}
+					wood = false;
+				} else if (key == 'A') {
+					wood = false;
+					menu->vPromptClear();
+					menu->MenuState = PromptSawSpeed;
+				}
 			}
-			else if (key == 'B') // === Mode manuel ===
-			{ 
-				if (wood.code == -1)
-				{
-					// Commencer le mode manuel
-				}
-			}
-			else if (key == 'A') // === Mode modification ===
-			{ 
-				if (wood.code == -1)
-				{
-					id = 0;
-					menuState = Prompting;
-					return;
-				}
-			}
-		}
-			
+
 		} else {
-
+			if(key == '*') { // si la touche clear est appuyée et que le menu est en mode prompt
+				if (menu->MenuState == PromptWoodId || menu->MenuState == PromptSawSpeed || menu->MenuState == PromptFeedRate) {
+					menu->vPromptBackspace(); // retirer le dernier caractère du prompt
+				}
+			} else {
+				// selon le mode du menu, afficher une alerte avec vCreateTaskShowAlert d'une seconde expliquant le prompt
+				if (menu->MenuState == PromptWoodId) {
+					vCreateTaskShowAlert("Entrez l'ID du bois", 1000);
+				} else if (menu->MenuState == PromptSawSpeed) {
+					vCreateTaskShowAlert("Vitesse scie", 1000);
+				} else if (menu->MenuState == PromptFeedRate) {
+					vCreateTaskShowAlert("Vitesse d'avancement", 1000);
+				}
+			}
 		}
-});
+	});
 
-while (true)
-{
-	// Mettre a jour la liste des touches
-	keypad.updateList();
-	// Ajouter un délai pour éviter de lire trop rapidement
-	vTaskDelay(pdMS_TO_TICKS(50));
-}
+	// Attendre 3 secondes avant de commencer la tâche
+	vTaskDelay(pdMS_TO_TICKS(3000));
+	menu->vShowPrompt("ID du bois: ", "ID: ");
+	menu->xMenuState = PromptWoodId;
+
+	while (true)
+	{
+		// Mettre a jour la liste des touches
+		keypad.updateList();
+		// Ajouter un délai pour éviter de lire trop rapidement
+		vTaskDelay(pdMS_TO_TICKS(50));
+	}
 }
 
 /// ===================== Yanick =====================
 
 /**
  * Nom de la fonction :
- *  @name vLcdSetLine
- * Description de la fonction :
- *  @brief Fonction pour mettre à jour une ligne de l'écran LCD
- * et effectue la moyenne avant de l'envoyer dans une file.
- *  Paramètre(s) d'entrée :
- *  1. @param message : Le message à afficher
- *  2. @param iLine   : Numéro de la pin du capteur de lumière.
- *  
- * Valeur de retour :
- *  @return void
- * Note(s) :
- *  @note aucune(s)
- *
- * Historique :
- *  @date 2021-04-14 @author Yanick Labelle initiale du code.
- */
-void vLcdSetLine(const char *message, int iLine)
-{
-	lcd.setCursor(0, iLine);
-	lcd.print("                    ") // 20 espaces
-	lcd.setCursor(0, iLine);
-	lcd.print(message);
-}
-
-/**
- * Nom de la fonction :
  *  @name writeFileData
  * Description de la fonction :
  *  @brief Fontion pour ajouter des données dans un fichier JSON
- * 
+ *
  *  Paramètre(s) d'entrée :
  *  1. @param filename : le nom du fichier
  *  2. @param data     : les données à ajouter
- *  
+ *
  * Valeur de retour :
  *  @return void
  * Note(s) :
@@ -665,10 +670,10 @@ void writeFileData(const char *filename, const char *data)
  *  @name readFileData
  * Description de la fonction :
  *  @brief Fontion pour lire les données d'un fichier JSON
- * 
+ *
  *  Paramètre(s) d'entrée :
  *  1. @param filename : le nom du fichier
- *  
+ *
  * Valeur de retour :
  *  @return String : les données du fichier
  * Note(s) :
@@ -702,140 +707,50 @@ String readFileData(const char *filename)
 	return fileData;
 }
 
-/**
- * Nom de la fonction :
- *  @name vModificationMode
- * Description de la fonction :
- *  @brief Fonction pour modifier les paramètres du bois (Mode modification)
- * 
- *  Paramètre(s) d'entrée :
- *  1. @param pvParameters : paramètres de la fonction
- *  
- * Valeur de retour :
- *  @return void
- * Note(s) :
- *  @note aucune(s)
- *
- * Historique :
- *  @date 2021-04-13 @author Yanick Labelle - Entrée initiale du code.
- */
-void vModificationMode(void *pvParameters)
+/// Mettre à jour l'écran LCD
+void vTaskUpdateLCD(void *pvParameters)
 {
-	// Recevoir les paramètres par le clavier numérique
 
-	updateWood(1, 100, 200);
-}
+	Adafruit_MLX90614 xIRWoodTempReader = Adafruit_MLX90614();
+	double dWoodTemp = 20;
 
-/**
- * Nom de la tâche :
- *  @name vTaskUpdateDb
- * Description de la tâche :
- *  @brief Fontion pour lire la valeur du capteur de son, la convertir en décibels et l'envoyer dans une file.
- * 
- *  Paramètre(s) d'entrée :
- *  1. @param pvParameters : paramètres de la tâche
- *  
- * Valeur de retour :
- *  @return void
- * Note(s) :
- *  @note Utilisation de ce wiki pour la conversion de la tension en décibels :
- *        https://wiki.dfrobot.com/Gravity__Analog_Sound_Level_Meter_SKU_SEN0232
- *
- * Historique :
- *  @date 2021-04-13 @author Yanick Labelle initiale du code.
- */
-void vTaskUpdateDb(void *pvParameters)
-{
+	float fAmbiantHumid; // Définition locale de l'humidité ambiante
+	float fAmbiantTemp;	 // Définition locale de la température ambiante
+	float fDb;			 // Définition locale du niveau sonore en dB
+	float fSoundSensorVoltage, fSoundSensorValue;
+	float uiTemp, uiHumid;
+	if (!xIRWoodTempReader.begin())
+	{
+		// Erreur de communication avec le capteur
+	}	
+
 	while (true)
 	{
-		float fSoundSensorVoltage, fSoundSensorValue;
+		// Récupérer la température du bois
+		dWoodTemp = xIRWoodTempReader.readObjectTempC();
+
+		// Récupérer l'humidité et la température ambiante
+		uiTemp = digitalRead(TEMPERATURE_PIN);
+		uiHumid = digitalRead(HUMIDITY_PIN);
+
+		// Récupérer le niveau sonore en dB
 
 		fSoundSensorVoltage = analogRead(SOUND_SENSOR_PIN) / 1024.0 * VOLTAGE_REFERENCE;
 		fSoundSensorValue = fSoundSensorVoltage * 50.0; // conversion de la tension en décibels
 
-		xQueueSend(xQueueDb, &fSoundSensorValue, portMAX_DELAY);
-	}
-}
+		// Afficher les valeurs sur l'écran LCD
+		menu->vUpdateInfo((fDb, fAmbiantHumid, fAmbiantTemp, (float)dWoodTemp));
 
-/**
- * Nom de la tâche :
- *  @name vTaskUpdateAmbiantHumidTemp
- * Description de la tâche :
- *  @brief tâche pour mettre à jour la température et l'humidité ambiante et les envoyer dans une file.
- * 
- *  Paramètre(s) d'entrée :
- *  1. @param pvParameters : paramètres de la tâche
- *  
- * Valeur de retour :
- *  @return void
- * Note(s) :
- *  @note aucune(s)
- *
- * Historique :
- *  @date 2021-04-13 @author Yanick Labelle initiale du code.
- */
-void vTaskUpdateAmbiantHumidTemp(void *pvParameters)
-{
-	while (true)
-	{
-		float uiTemp, uiHumid;
-
-		uiTemp = digitalRead(TEMPERATURE_PIN);
-		uiHumid = digitalRead(HUMIDITY_PIN);
-
-		xQueueSend(xQueueAmbiantTemp, &uiTemp, portMAX_DELAY);
-		xQueueSend(xQueueAmbiantHumid, &uiHumid, portMAX_DELAY);
-	}
-}
-
-/**
- * Nom de la tâche :
- *  @name vTaskUpdateLCD
- * Description de la tâche :
- *  @brief tâche pour mettre à jour l'affichage LCD.
- * 
- *  Paramètre(s) d'entrée :
- *  1. @param pvParameters : paramètres de la tâche
- *  
- * Valeur de retour :
- *  @return void
- * Note(s) :
- *  @note aucune(s)
- *
- * Historique :
- *  @date 2021-04-13 @author Yanick Labelle initiale du code.
- */
-void vTaskUpdateLCD(void *pvParameters)
-{
-	while (true)
-	{
-		double dWoodTemp;    // Définition locale de la température du bois
-		float fAmbiantHumid; // Définition locale de l'humidité ambiante
-		float fAmbiantTemp;	 // Définition locale de la température ambiante
-		float fDb;			 // Définition locale du niveau sonore en dB
-
-		// Récupérer les valeurs des files
-
-		xQueueReceive(xQueueWoodTemp, &dWoodTemp, portMAX_DELAY);
-		xQueueReceive(xQueueAmbiantHumid, &fAmbiantHumid, portMAX_DELAY);
-		xQueueReceive(xQueueAmbiantTemp, &fAmbiantTemp, portMAX_DELAY);
-		xQueueReceive(xQueueDb, &fDb, portMAX_DELAY);
-
-		// Afficher les données sur l'écran LCD
-		lcd.print("dB: ");
-		lcd.print(&fDb);
-		lcd.print("Temp: ");
-		lcd.print(&fAmbiantTemp);
-		lcd.setCursor(0, 1);
-		lcd.print("Humidite: ");
-		lcd.print(&fAmbiantHumid);
-		lcd.print("C");
+		// Attendre 1 seconde
+		vTaskDelay(pdMS_TO_TICKS(1000));
 	}
 }
 
 void setup()
 {
 	// ===================== Olivier =====================
+	// Initialisation de la communication sérielle
+	Serial.begin(115200);
 
 	menu = new Menu(0x27, 20, 4);
 
@@ -843,17 +758,6 @@ void setup()
 	pinMode(TEMPERATURE_PIN, INPUT);
 	pinMode(HUMIDITY_PIN, INPUT);
 	pinMode(SOUND_SENSOR_PIN, INPUT);
-
-	// Initialisation de l'écran LCD
-	Adafruit_LiquidCrystal lcd(0x27);
-
-	// Initialiser l'écran LCD
-	lcd.begin(16, 4); // ÉCran d'une résolution de 16x4
-	lcd.clear();
-	lcd.home();
-
-	// Initialisation de la communication sérielle
-	Serial.begin(115200);
 
 	// Monter le système de fichiers LittleFS
 	if (!LittleFS.begin())
@@ -865,16 +769,7 @@ void setup()
 	/// ===================== Équipe =====================
 
 	// Priorité 1 - Coeur 0 - Taille de pile 2048 - Lecture de la vitesse de la scie
-	xTaskCreatePinnedToCore(vTaskreadSawSpeed, "vTaskreadSawSpeed", TASK_STACK_SIZE, NULL, 1, &HandlereadSawSpeed, 0);
-
-	// Priorité 2 - Coeur 1 - Taille de pile 2048 - Lecture de la température et de l'humidité ambiante
-	xTaskCreatePinnedToCore(vTaskUpdateAmbiantHumidTemp, "vTaskUpdateAmbiantHumidTemp", TASK_STACK_SIZE, NULL, 2, &HandleUpdateAmbiantHumidTemp, 1);
-
-	// Priorité 2 - Coeur 1 - Taille de pile 2048 - Lecture du niveau sonore en dB
-	xTaskCreatePinnedToCore(vTaskUpdateDb, "vTaskUpdateDb", TASK_STACK_SIZE, NULL, 2, &HandleUpdateDb, 1);
-
-	// Priorité 1 - Coeur 1 - Taille de pile 2048 - Affichage des données sur l'écran LCD
-	xTaskCreatePinnedToCore(vTaskUpdateLCD, "vTaskUpdateLCD", TASK_STACK_SIZE, NULL, 1, &HandleUpdateLCD, 1);
+	xTaskCreatePinnedToCore(vTaskKeypad, "Tâche Keypad", TASK_STACK_SIZE, NULL, 1, &HandleKeypad, 0);	
 }
 
 void loop()

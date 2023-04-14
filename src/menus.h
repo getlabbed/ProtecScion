@@ -18,34 +18,37 @@ typedef enum MenuState_t {Init, PromptWoodId, PromptSawSpeed, PromptFeedRate, Le
 
 typedef struct AlertParams_t
 {
-  char* cpText;
-  uint8_t u8DurationMs;
+  String sText;
+  uint16_t u16DurationMs;
 };
-
 
 class Menu_t
 {
 private:
   SemaphoreHandle_t xSemaphoreLCD;
+  SemaphoreHandle_t xSemaphoreAlert;
   Adafruit_LiquidCrystal *lcd;
-  char *cpAlertBuffer;
-  char *cpAlertBufferSecondLine;
-  bool bAlertActive;
+  String sAlertBuffer;
+  String sPromptTextBuffer;
+  String sPromptInputBuffer;
 
   void vShowBootScreen();
 
-  void vLCDSetLine(char* cpText, uint8_t u8Line);
+  void vLCDSetLine(String sText, uint8_t u8Line);
 public:
   Menu_t(uint8_t u8LCDAddress, uint8_t u8LCDColumns, uint8_t u8LCDRows);
 
-  void vShowPrompt(char* cpPromptTitle, char* cpPromptText);
-  void vUpdatePrompt(char* cpText);
+  void vShowPrompt(String sPromptTitle, String sPromptText);
+  void vPromptAppend(String sText);
+  void vPromptBackspace();
+  void vPromptClearInput();
+  String sPromptGetInput();
   
-  void vShowMenu(char* cpTitle);
+  void vShowMenu(String sTitle);
 
-  void vUpdateOperation(float fSoundLevel, float fTempAmbi, float fHumidityAmbi, float fTempWood);
+  void vUpdateInfo(float fSoundLevel, float fTempAmbi, float fHumidityAmbi, float fTempWood);
 
-  void vShowAlert(char* cpText, uint8_t u8DurationMs);
+  void vShowAlert(String sText, uint16_t u16DurationMs);
 
   MenuState_t xMenuState;
 };

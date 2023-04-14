@@ -1,5 +1,4 @@
 /**
-
  * Nom du fichier :
  *  @name menus.cpp
  * Description :
@@ -19,12 +18,12 @@
 
 Menu_t::Menu_t(uint8_t u8LCDAddress, uint8_t u8LCDColumns, uint8_t u8LCDRows)
 {
-  this->bAlertActive = false;
   this->xMenuState = Init;
-  this->cpAlertBuffer = (char *)malloc(20 * sizeof(char));
 
   this->xSemaphoreLCD = xSemaphoreCreateBinary();
+  this->xSemaphoreAlert = xSemaphoreCreateBinary();
   xSemaphoreGive(this->xSemaphoreLCD);
+  xSemaphoreGive(this->xSemaphoreAlert);
 
   this->lcd = new Adafruit_LiquidCrystal(u8LCDAddress);
   this->lcd->begin(u8LCDColumns, u8LCDRows);
@@ -39,73 +38,104 @@ void Menu_t::vShowBootScreen()
   this->vLCDSetLine("    Yanick Labelle ", 3);
 }
 
-void Menu_t::vLCDSetLine(char *pcString, uint8_t u8Line)
+void Menu_t::vLCDSetLine(String sText, uint8_t u8Line)
 {
-  if (u8Line == 1) u8Line = 2;
-  else if (u8Line == 2) u8Line = 1;
+  if(xSemaphoreTake(this->xSemaphoreLCD, portMAX_DELAY)) return;
 
-  xSemaphoreTake(this->xSemaphoreLCD, portMAX_DELAY);
-  if (u8Line == 1)
-  {
-    strcpy(this->cpAlertBuffer, pcString);
-    if (this->bAlertActive) {
+  if (u8Line == 1){
+    this->sAlertBuffer = sText;
+    if (!xSemaphoreTake(this->xSemaphoreAlert, 0)) {
       xSemaphoreGive(this->xSemaphoreLCD);
       return;
+    } else {
+      xSemaphoreGive(this->xSemaphoreAlert);
     }
   }
+
+  u8Line = (u8Line == 1) ? 2 : (u8Line == 2) ? 1 : u8Line;
+
   this->lcd->setCursor(0, u8Line);
   this->lcd->print("                    ");
   this->lcd->setCursor(0, u8Line);
-  this->lcd->print(pcString);
+  this->lcd->print(sText);
   xSemaphoreGive(this->xSemaphoreLCD);
 }
 
-void Menu_t::vShowPrompt(char *pcPromptTitle, char *pcPromptText)
+void Menu_t::vShowPrompt(String sPromptTitle, String sPromptText)
 {
-  this->vLCDSetLine(pcPromptTitle, 0);
-  this->vLCDSetLine(pcPromptText, 1);
+  this->vLCDSetLine(sPromptTitle, 0);
+  this->vLCDSetLine(sPromptText, 1);
   this->vLCDSetLine("                    ", 2);
   this->vLCDSetLine("                    ", 3);
+
+  // si le texte est plus long que 10 caractères, on le coupe
+  if(sPromptText.length() > 10) {
+    sPromptText = sPromptText.substring(0, 10);
+  }
+
+  sPromptTextBuffer = sPromptText;
 }
 
-void Menu_t::vShowMenu(char *pcTitle)
+void Menu_t::vPromptAppend(String sText)
 {
-  this->vLCDSetLine(pcTitle, 0);
+  // ajouter le texte au buffer seulement si la longueur est inférieure à 20
+  if(sPromptInputBuffer.length() + sText.length() < 20) {
+    this->sPromptInputBuffer += sText;
+  }
+
+  this->vLCDSetLine(this->sPromptInputBuffer, 1);
+}
+
+void Menu_t::vPromptBackspace()
+{
+  // supprimer le dernier caractère du buffer
+  if(this->sPromptInputBuffer.length() > 0) {
+    this->sPromptInputBuffer.remove(this->sPromptInputBuffer.length() - 1);
+  }
+
+  this->vLCDSetLine(this->sPromptInputBuffer, 1);
+}
+
+String Menu_t::sPromptGetInput()
+{
+  return this->sPromptInputBuffer;
+}
+
+void Menu_t::vPromptClearInput()
+{
+  this->sPromptInputBuffer = "";
+}
+
+void Menu_t::vShowMenu(String sTitle)
+{
+  this->vLCDSetLine(sTitle, 0);
   this->vLCDSetLine("                    ", 1);
   this->vLCDSetLine("                    ", 2);
   this->vLCDSetLine("                    ", 3);
 }
 
-void Menu_t::vUpdateOperation(float fSoundLevel, float fTempAmbi, float fHumidityAmbi, float fWoodTemp)
+void Menu_t::vUpdateInfo(float fSoundLevel, float fTempAmbi, float fHumidityAmbi, float fWoodTemp)
 {
-  // Formater et afficher le niveau de son avec 3 décimales
-  char cSoundLevel[20];
-  sprintf(cSoundLevel, "Sound: %.4f", fSoundLevel);
-  this->vLCDSetLine(cSoundLevel, 1);
+  // si le mode est différent de l'opération, on ne fait rien
+  if(this->xMenuState != Operation) return;
 
-  // Formater et afficher la température et l'humidité avec 2 decimale sur la même ligne
-  char cTempHum[20];
-  sprintf(cTempHum, "Ambi: %2.2C %2.2f%", fTempAmbi, fHumidityAmbi);
-  this->vLCDSetLine(cTempHum, 2);
+  // afficher le niveau de son avec 4 décimales utilisant String sur la ligne 1
+  this->vLCDSetLine("Son: " + String(fSoundLevel, 4) + "dB", 1);
 
-  // Formater et afficher la température du bois avec 1 décimale
-  char cWoodTemp[20];
-  sprintf(cWoodTemp, "Wood: %.1fC", fWoodTemp);
-  this->vLCDSetLine(cWoodTemp, 3);
+  // afficher la température et humidité de l'air avec 2 décimales sur la ligne 2
+  this->vLCDSetLine("Ambi: " + String(fTempAmbi, 2) + "C " + String(fHumidityAmbi, 2) + "%", 2);
+
+  // afficher la température du bois avec 2 décimale sur la ligne 3
+  this->vLCDSetLine("Temp bois: " + String(fWoodTemp, 2) + "C", 3);
 }
 
-void Menu_t::vShowAlert(char *pcAlertText, uint8_t u8DurationMs)
+void Menu_t::vShowAlert(String sAlertText, uint16_t u16DurationMs)
 {
-  if (this->bAlertActive) return;
+  if(!xSemaphoreTake(this->xSemaphoreAlert, portMAX_DELAY)) return;
 
-  this->bAlertActive = true;
-  
-  char cAlertTextBuffer[20];
-  strncpy(cAlertTextBuffer, pcAlertText, 20);
+  this->vLCDSetLine(sAlertText, 1);
+  vTaskDelay(pdMS_TO_TICKS(u16DurationMs));
+  this->vLCDSetLine(this->sAlertBuffer, 1);
 
-  this->vLCDSetLine(cAlertTextBuffer, 1);
-  vTaskDelay(pdMS_TO_TICKS(u8DurationMs));
-  this->vLCDSetLine(this->cpAlertBuffer, 1);
-
-  this->bAlertActive = false;
+  xSemaphoreGive(this->xSemaphoreAlert);
 }

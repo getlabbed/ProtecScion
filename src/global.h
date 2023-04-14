@@ -20,20 +20,22 @@
 /// Typedefs
 
 /// ===================== Olivier =====================
-typedef struct MenuOption_t MenuOption_t;
-struct MenuOption_t {
-  char name[16];                           // nom de l'option
-  char value[8];                           // valeur de l'option
-  void *params;                            // données optionnelles
-  int (*hookFunction)(MenuOption_t *self); // fonction exécutée lors d'un click
-};
 
-typedef struct {
-  char *name[16];           // nom du menu
-  MenuOption_t options[10]; // liste d'options
-} Menu_t;
+// -- Pas utilisé pour le moment --
+// typedef struct MenuOption_t MenuOption_t;
+// struct MenuOption_t {
+//   char name[16];                           // nom de l'option
+//   char value[8];                           // valeur de l'option
+//   void *params;                            // données optionnelles
+//   int (*hookFunction)(MenuOption_t *self); // fonction exécutée lors d'un click
+// };
 
-typedef Menu_t *MenuStack_t; // définition de la pile pour la navigation
+// typedef struct {
+//   char *name[16];           // nom du menu
+//   MenuOption_t options[10]; // liste d'options
+// } Menu_t;
+
+// typedef Menu_t *MenuStack_t; // définition de la pile pour la navigation
 
 typedef struct {
   char name[16]; // nom du bois
@@ -49,7 +51,8 @@ float readTemperatureWood();
 
 /// Programmation des indicateurs lumineux
 typedef enum LightColors_t { Red = 1, Green = 2, Blue = 3 };
-void setLightIndicator(lightColors);
+
+void vTasksetLightIndicator(void *pvParameters);
 
 /// Programmation du mode manuel
 int writeWood(Wood_t);
