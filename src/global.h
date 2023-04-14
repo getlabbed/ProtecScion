@@ -1,8 +1,15 @@
-/// @file headers.h
-/// @brief Les definitions globales incluant les entetes de fonction
-///
-/// Ce fichier contient les entetes de fonction et d'autre definitions globales
-/// necessare au project
+/**
+ * Nom du fichier :
+ *  @name global.h
+ * Description :
+ *  @brief Fichier d'entête pour le code ProtecScion.ino
+ * restrictions:
+ *  Pour type de carte ESP32 Feather
+ *  Pour utilisation avec ProtecScion.ino
+ * Historique :
+ *  @date 2021-04-13 @author Olivier David Laplante @author Yanick Labelle - Entrée initiale du code.
+ *  @note aucune(s)
+ */
 
 #ifndef GLOBAL_H
 #define GLOBAL_H
@@ -35,15 +42,6 @@ typedef struct {
   int feedRate;  // vitesse d'avancement
 } Wood_t;
 
-/// ===================== Yanick =====================
-
-/// Structure qui contient les données a mettre à jour sur l'écran LCD
-
-typedef struct {
-    int iDb = 0;                  // niveau sonore en dB
-    float fAmbiantHumidTemp = 0;  // température et humidité ambiante
-} LCDParams_t;
-
 /// ===================== Olivier =====================
 
 /// Affichage de la température du bois
@@ -73,31 +71,37 @@ void panicKillHook();
 
 /// ===================== Yanick =====================
 
-// Define the Wood_t structure
-typedef struct {
-    int id;
-    const char* name;
-} WoodType_t;
-
-
-/// Programmation du mode modification
-
-void vModificationMode(Wood_t name);
-
-/// Programmation du mode apprentissage
-
-void vTaskLearningMode(); // * On doit ajouter le storage* en ce moment on a juste wood_t
-
-/// Mettre à jour le niveau sonore en dB
-
-void vTaskUpdateDb(void);
+/// Mettre à jour l'écran LCD
+void vTaskUpdateLCD(void *pvParameters);
 
 /// Mettre à jour la température et l'humidité ambiante
+void vTaskUpdateAmbiantHumidTemp(void *pvParameters);
 
-void vTaskUpdateAmbiantHumidTemp(void);
+/// Mettre à jour le niveau sonore en dB
+void vTaskUpdateDb(void *pvParameters);
 
-/// Mettre à jour l'écran LCD
+/// Programmation du mode apprentissage
+void vTasklearningMode(void *pvParameters);
 
-void vTaskUpdateLCD(void *pvParameters);
+/// Programmation du mode modification
+void vModificationMode(void *pvParameters);
+
+// Écriture d'un fichier JSON
+String readFileData(const char *filename);
+
+// LEcture d'un fichier JSON
+void writeFileData(const char *filename, const char *data);
+
+// Affichage LCD
+void vLcdSetLine(const char *message, int iLine);
+
+// Modifier les paramètres existants d'un bois
+void updateWood(int id, int sawSpeed, int feedRate);
+
+// Création d'un nouveau bois
+void writeWood(int id, int sawSpeed, int feedRate);
+
+// Lecture des paramètres d'un bois
+Wood_t readWood(int id);
 
 #endif

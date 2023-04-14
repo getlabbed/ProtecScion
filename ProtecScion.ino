@@ -54,8 +54,6 @@ QueueHandle_t xQueueAmbiantTemp;
 QueueHandle_t xQueueDb;
 QueueHandle_t xQueueLightIndicator;
 
-LCDParams_t LCDParams;
-
 // ===================================== Définition des constantes ===============================================
 
 #define TASK_STACK_SIZE 2048  // Taille allouée de la pile pour les tâches RTOS ()
@@ -95,7 +93,7 @@ byte colPins[COLS] = {5, 4, 3, 2};
 Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
 
 // ------------------------------------ Initialisation du menu ---------------------------------------
-Menu *menu = new Menu();
+Menu *menu;
 
 /**
  * Nom de la tâche :
@@ -514,8 +512,8 @@ void vTaskKeypad(void *pvParameters)
 {
 	keypad.setDebounceTime(20);
 	// id variable to store the wood id
-	int id = 0;
-	char cpTextID[10] = "";
+	int iInput = 0;
+	char cpTextInput[10];
 	// wood variable to store the wood object
 	Wood_t wood;
 
@@ -526,12 +524,7 @@ void vTaskKeypad(void *pvParameters)
 		{
 			if (menuState == Prompting)
 			{
-				id = id * 10 + (key - '0'); // ajouter le chiffre à l'id
-				sprintf(cpTextID, "ID: %d", id); // convertir l'id en string
-				vLCDSetLine("Select wood id", 0); // Afficher le message
-				vLCDSetLine(cpTextID, 1); // Afficher l'id
-				vLCDSetLine("                    ", 2); // Effacer la ligne 3
-				vLCDSetLine("                    ", 3); // Effacer la ligne 4
+				
 			}
 		}
 		else if (isAlpha(key))
@@ -764,9 +757,6 @@ void vTaskUpdateDb(void *pvParameters)
 	}
 }
 
-/// Mettre à jour la température et l'humidité ambiante
-
-
 /**
  * Nom de la tâche :
  *  @name vTaskUpdateAmbiantHumidTemp
@@ -845,6 +835,10 @@ void vTaskUpdateLCD(void *pvParameters)
 
 void setup()
 {
+	// ===================== Olivier =====================
+
+	menu = new Menu(0x27, 20, 4);
+
 	// Initialisation des broches
 	pinMode(TEMPERATURE_PIN, INPUT);
 	pinMode(HUMIDITY_PIN, INPUT);
