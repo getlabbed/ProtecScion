@@ -4,6 +4,9 @@
 /// Ce fichier contient les entetes de fonction et d'autre definitions globales
 /// necessare au project
 
+#ifndef GLOBAL_H
+#define GLOBAL_H
+
 /// Inclusion
 #include "../libs/debugger/debug.h"
 
@@ -14,8 +17,8 @@ typedef struct MenuOption_t MenuOption_t;
 struct MenuOption_t {
   char name[16];                           // nom de l'option
   char value[8];                           // valeur de l'option
-  void *params;                            // donnees optionnelles
-  int (*hookFunction)(MenuOption_t *self); // fonction executee lors d'un click
+  void *params;                            // données optionnelles
+  int (*hookFunction)(MenuOption_t *self); // fonction exécutée lors d'un click
 };
 
 typedef struct {
@@ -37,8 +40,8 @@ typedef struct {
 /// Structure qui contient les données a mettre à jour sur l'écran LCD
 
 typedef struct {
-    int iDb;
-    float fAmbiantHumidTemp;
+    int iDb = 0;                  // niveau sonore en dB
+    float fAmbiantHumidTemp = 0;  // température et humidité ambiante
 } LCDParams_t;
 
 /// ===================== Olivier =====================
@@ -47,7 +50,7 @@ typedef struct {
 float readTemperatureWood();
 
 /// Programmation des indicateurs lumineux
-enum lightColors { Red = 1, Green = 2, Blue = 4 };
+typedef enum LightColors_t { Red = 1, Green = 2, Blue = 3 };
 void setLightIndicator(lightColors);
 
 /// Programmation du mode manuel
@@ -70,6 +73,13 @@ void panicKillHook();
 
 /// ===================== Yanick =====================
 
+// Define the Wood_t structure
+typedef struct {
+    int id;
+    const char* name;
+} WoodType_t;
+
+
 /// Programmation du mode modification
 
 void vModificationMode(Wood_t name);
@@ -88,4 +98,6 @@ void vTaskUpdateAmbiantHumidTemp(void);
 
 /// Mettre à jour l'écran LCD
 
-void vTaskUpdateLCD(void *pvParameters)
+void vTaskUpdateLCD(void *pvParameters);
+
+#endif
