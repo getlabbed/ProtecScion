@@ -1,13 +1,54 @@
+/**
+ * Nom du fichier :
+ *  @name menus.h
+ * Description :
+ *  @brief Fichier d'entête pour le code menus.cpp
+ * restrictions:
+ *  Pour type de carte ESP32 Feather
+ *  Pour utilisation avec menus.cpp
+ * Historique :
+ *  @date 2021-04-13 @author Olivier David Laplante - Entrée initiale du code.
+ *  @note aucune(s)
+ */
+
+#include <Adafruit_LiquidCrystal.h>
+#include <freertos/semphr.h>
+
+typedef enum MenuState_t {Init, PromptWoodId, PromptSawSpeed, PromptFeedRate, Learning, Operation};
+
+typedef struct AlertParams_t
+{
+  char* cpText;
+  uint8_t u8DurationMs;
+};
 
 
-typedef enum MenuState_t {Selecting, Prompting};
+class Menu_t
+{
+private:
+  SemaphoreHandle_t xSemaphoreLCD;
+  Adafruit_LiquidCrystal *lcd;
+  char *cpAlertBuffer;
+  char *cpAlertBufferSecondLine;
+  bool bAlertActive;
 
+  void vShowBootScreen();
 
+  void vLCDSetLine(char* cpText, uint8_t u8Line);
+public:
+  Menu_t(uint8_t u8LCDAddress, uint8_t u8LCDColumns, uint8_t u8LCDRows);
 
+  void vShowPrompt(char* cpPromptTitle, char* cpPromptText);
+  void vUpdatePrompt(char* cpText);
+  
+  void vShowMenu(char* cpTitle);
 
+  void vUpdateOperation(float fSoundLevel, float fTempAmbi, float fHumidityAmbi, float fTempWood);
 
+  void vShowAlert(char* cpText, uint8_t u8DurationMs);
 
-
+  MenuState_t xMenuState;
+};
 
 
 
