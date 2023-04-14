@@ -1,14 +1,16 @@
-/*
+/**
  * Nom du fichier :
- * ProtecScion.ino
+ *  @name ProtecScion.ino
  * Description :
- * Programme permettant d'améliorer la fonctionnalité d'un banc de scie.
+ *  @brief Programme permettant d'améliorer la fonctionnalité d'un banc de scie.
  * restrictions:
- * Pour type de carte ESP32 Feather
+ *  Pour type de carte ESP32 Feather
  * Historique :
- * 2023-04-13 Olivier David Laplante, Yanick Labelle - Entrée initiale du code.
- * Notes: Aucune(s)
+ *  @date 2021-04-13 @author Olivier David Laplante @author Yanick Labelle - Entrée initiale du code.
+ *  @note Utilisation de Doxygen pour la documentation:
+ *         https://www.doxygen.nl/manual/docblocks.html
  */
+
 // ======================================== Fichiers d'inclusion =================================================
 
 // Importation du fichier d'inclusion global
@@ -56,24 +58,23 @@ LCDParams_t LCDParams;
 
 // ===================================== Définition des constantes ===============================================
 
-#define TASK_STACK_SIZE 2048	// Taille allouée de la pile pour les tâches RTOS ()
+#define TASK_STACK_SIZE 2048  // Taille allouée de la pile pour les tâches RTOS ()
 #define VOLTAGE_REFERENCE 3.3 // Tension de rérérence pour le ESP32 Feather
 
-#define TEMPERATURE_PIN 2			// Broche de la température ambiante
-#define HUMIDITY_PIN 3				// Broche de l'humidité ambiante
-#define SOUND_SENSOR_PIN 4		// Broche du niveau sonore
+#define TEMPERATURE_PIN 2	  // Broche de la température ambiante
+#define HUMIDITY_PIN 3		  // Broche de l'humidité ambiante
+#define SOUND_SENSOR_PIN 4	  // Broche du niveau sonore
 #define LIGHT_INDICATOR_PIN 5 // Broche de l'indicateur lumineux
-#define SAW_INPUT_PIN 6				// Broche d'entrée de la vitesse de la scie
-#define SAW_OUTPUT_PIN 7			// Broche de sortie PWM pour la vitesse de la scie
+#define SAW_INPUT_PIN 6		  // Broche d'entrée de la vitesse de la scie
+#define SAW_OUTPUT_PIN 7      // Broche de sortie PWM pour la vitesse de la scie
 
 // ================================== Définition des variables globales ==========================================
 
 // Définition des variables pour le PID
-double dWantedSawSpeed, dSawInput, dSawOutput;
-
+double dWantedSawSpeed, dSawInput, dSawOutput; 
 double Kp = 2, Ki = 5, Kd = 1;
 
-int sumSawSpeed, readingCount;
+int sumSawSpeed, readingCount; // Définition des variables pour le calcul de la vitesse moyenne de la scie
 
 // ------------------------------------ Initialisation du Clavier numérique ---------------------------------------
 const byte ROWS = 4;
@@ -86,7 +87,7 @@ char keys[ROWS][COLS] = {
 		{'*', '0', '#', 'D'}};
 
 // Types de bois disponibles
-const String woodType[] = {"Sapin","Pin","Noyer","Bouleau","Chêne","Érable","Frêne","Merisier","Mélèze","Épinette"};
+const String woodType[] = {"Sapin", "Pin", "Noyer", "Bouleau", "Chêne", "Érable", "Frêne", "Merisier", "Mélèze", "Épinette"};
 
 byte rowPins[ROWS] = {9, 8, 7, 6};
 byte colPins[COLS] = {5, 4, 3, 2};
@@ -162,11 +163,11 @@ void vTasklearningMode(void *pvParameters)
 	while (true)
 	{
 		if (dSawInput >= 4000)
-			{
-				// Faire la moyenne des valeurs de la vitesse de la scie
-				sumSawSpeed += dSawInput;
-				readingCount++;
-			}
+		{
+			// Faire la moyenne des valeurs de la vitesse de la scie
+			sumSawSpeed += dSawInput;
+			readingCount++;
+		}
 		else
 		{
 			if (readingCount != 0) // Ne pas diviser par 0
@@ -255,12 +256,12 @@ Wood_t readWood(int id)
 
 void writeWood(int id, int sawSpeed, int feedRate)
 {
-	// Read the existing JSON data from the file
+	// Lire les données du fichier JSON
 	String fileData = readFileData("/wood.json");
 
 	if (fileData.length() > 0)
 	{
-		// Deserialize the JSON data into a JsonDocument
+		// Ajuster la taille du fichier selon la quantité de bois
 		StaticJsonDocument<2048> doc;
 		DeserializationError error = deserializeJson(doc, fileData);
 
@@ -271,7 +272,7 @@ void writeWood(int id, int sawSpeed, int feedRate)
 			return;
 		}
 
-		// Create a new JsonObject with the wood data
+		// Créer un nouveau object JSON avec les données du bois
 		JsonObject newWood;
 		newWood["name"] = woodType[id];
 		newWood["code"] = id;
@@ -297,42 +298,42 @@ void writeWood(int id, int sawSpeed, int feedRate)
 
 void updateWood(int id, int sawSpeed, int feedRate)
 {
-		// Lire le fichier de configuration
-    String fileData = readFileData("/wood.json");
+	// Lire le fichier de configuration
+	String fileData = readFileData("/wood.json");
 
-    if (fileData.length() > 0)
-    {
-				// Définir la taille du fichier selon la quantité de bois
-        StaticJsonDocument<2048> doc;
-        DeserializationError error = deserializeJson(doc, fileData);
+	if (fileData.length() > 0)
+	{
+		// Définir la taille du fichier selon la quantité de bois
+		StaticJsonDocument<2048> doc;
+		DeserializationError error = deserializeJson(doc, fileData);
 
-        if (error)
-        {
-            Serial.print("deserializeJson() failed: ");
-            Serial.println(error.c_str());
-            return;
-        }
+		if (error)
+		{
+			Serial.print("deserializeJson() failed: ");
+			Serial.println(error.c_str());
+			return;
+		}
 
-				// Accédé à l'objet json du bois à l'aide de son id
-        JsonObject root = doc.as<JsonObject>();
-        JsonObject woodObj = root[String(id)];
+		// Accédé à l'objet json du bois à l'aide de son id
+		JsonObject root = doc.as<JsonObject>();
+		JsonObject woodObj = root[String(id)];
 
-				// Mettre à jour les propriétés du JsonObject
-        woodObj["name"] = woodType[id];
-        woodObj["sawSpeed"] = sawSpeed;
-        woodObj["feedRate"] = feedRate;
+		// Mettre à jour les propriétés du JsonObject
+		woodObj["name"] = woodType[id];
+		woodObj["sawSpeed"] = sawSpeed;
+		woodObj["feedRate"] = feedRate;
 
-        // Serialize the modified JsonDocument back to a string
-        String modifiedData;
-        serializeJson(doc, modifiedData);
+		// Serialize the modified JsonDocument back to a string
+		String modifiedData;
+		serializeJson(doc, modifiedData);
 
-        // Save the modified JSON data back to the file
-        saveFileData("/wood.json", modifiedData);
-    }
-    else
-    {
-        Serial.println("Error reading JSON file data");
-    }
+		// Save the modified JSON data back to the file
+		saveFileData("/wood.json", modifiedData);
+	}
+	else
+	{
+		Serial.println("Error reading JSON file data");
+	}
 }
 
 void vTaskKeypad(void *pvParameters)
@@ -340,68 +341,133 @@ void vTaskKeypad(void *pvParameters)
 	keypad.setDebounceTime(20);
 	// id variable to store the wood id
 	int id = 0;
+	char cpTextID[10] = "";
 	// wood variable to store the wood object
 	Wood_t wood;
 
 	keypad.addEventListener([](char key) {
-		if(!keypad.isPressed(key)) return;
-		if(isDigit(key)){
-			if(menuState == Prompting) {
-				// append the key to the id variable
-				id = id * 10 + (key - '0');
-
+		if (!keypad.isPressed(key))
+			return;
+		if (isDigit(key))
+		{
+			if (menuState == Prompting)
+			{
+				id = id * 10 + (key - '0'); // ajouter le chiffre à l'id
+				sprintf(cpTextID, "ID: %d", id); // convertir l'id en string
+				vLCDSetLine("Select wood id", 0); // Afficher le message
+				vLCDSetLine(cpTextID, 1); // Afficher l'id
+				vLCDSetLine("                    ", 2); // Effacer la ligne 3
+				vLCDSetLine("                    ", 3); // Effacer la ligne 4
 			}
-		} else if(isAlpha(key)) { // s'assurer que la touche est une lettre (Modes)
-			if (menuState == Prompting) {
+		}
+		else if (isAlpha(key))
+		{ // s'assurer que la touche est une lettre (Modes)
+			if (menuState == Prompting)
+			{
 				// check if the id is valid and get the wood object
-				if(id >= 0 && id <= 9) {
+				if (id >= 0 && id <= 9)
+				{
 					wood = readWood(id);
 					menuState = Selecting;
 				}
-				if (key == 'D') {       // === Mode opération ===
-					if(wood.code == -1) {
+				if (key == 'D') // === Mode opération ===
+				{ 
+					if (wood.code == -1)
+					{
 						id = 0;
 						menuState = Prompting;
 						return;
 					}
 					// Commencer le mode opération
 					xTaskCreatePinnedToCore(vTaskSawControl, "SawControl", TASK_STACK_SIZE, NULL, 1, &xSawControlHandle, 0);
-				} else if(key == 'C') { // === Mode apprentissage ===
-						id = 0;
-						menuState = Prompting;
-						return;
-					}
-					// Commencer le mode apprentissage
-					xTaskCreatePinnedToCore(vTaskLearningMode, "LearningMode", TASK_STACK_SIZE, NULL, 1, &xLearningModeHandle, 0);
-				} else if(key == 'B') { // === Mode manuel ===
-					if(wood.code == -1) {
-						// Commencer le mode manuel
-					}
-				} else if(key == 'A') { // === Mode modification ===
-					if(wood.code == -1) {
-						id = 0;
-						menuState = Prompting;
-						return;
-					}
+				}
+				else if (key == 'C') // === Mode apprentissage ===
+				{ 
+					id = 0;
+					menuState = Prompting;
+					return;
+				}
+				// Commencer le mode apprentissage
+				xTaskCreatePinnedToCore(vTaskLearningMode, "LearningMode", TASK_STACK_SIZE, NULL, 1, &xLearningModeHandle, 0);
+			}
+			else if (key == 'B') // === Mode manuel ===
+			{ 
+				if (wood.code == -1)
+				{
+					// Commencer le mode manuel
 				}
 			}
+			else if (key == 'A') // === Mode modification ===
+			{ 
+				if (wood.code == -1)
+				{
+					id = 0;
+					menuState = Prompting;
+					return;
+				}
+			}
+		}
 			
 		} else {
 
 		}
-	});
+});
 
-	while (true)
-	{
-		// Mettre a jour la liste des touches
-		keypad.updateList();
-		// Ajouter un délai pour éviter de lire trop rapidement
-		vTaskDelay(pdMS_TO_TICKS(50));
-	}
+while (true)
+{
+	// Mettre a jour la liste des touches
+	keypad.updateList();
+	// Ajouter un délai pour éviter de lire trop rapidement
+	vTaskDelay(pdMS_TO_TICKS(50));
+}
 }
 
 /// ===================== Yanick =====================
 
+/**
+ * Nom de la fonction :
+ *  @name vLcdSetLine
+ * Description de la fonction :
+ *  @brief Fonction pour mettre à jour une ligne de l'écran LCD
+ * et effectue la moyenne avant de l'envoyer dans une file.
+ *  Paramètre(s) d'entrée :
+ *  1. @param message : Le message à afficher
+ *  2. @param iLine   : Numéro de la pin du capteur de lumière.
+ *  
+ * Valeur de retour :
+ *  @return void
+ * Note(s) :
+ *  @note aucune(s)
+ *
+ * Historique :
+ *  @date 2021-04-14 @author Yanick Labelle initiale du code.
+ */
+void vLcdSetLine(const char *message, int iLine)
+{
+	lcd.setCursor(0, iLine);
+	lcd.print("                    ") // 20 espaces
+	lcd.setCursor(0, iLine);
+	lcd.print(message);
+}
+
+/**
+ * Nom de la fonction :
+ *  @name writeFileData
+ * Description de la fonction :
+ *  @brief Fontion pour ajouter des données dans un fichier JSON
+ * 
+ *  Paramètre(s) d'entrée :
+ *  1. @param filename : le nom du fichier
+ *  2. @param data     : les données à ajouter
+ *  
+ * Valeur de retour :
+ *  @return void
+ * Note(s) :
+ *  @note aucune(s)
+ *
+ * Historique :
+ *  @date 2021-04-13 @author Yanick Labelle initiale du code.
+ */
 void writeFileData(const char *filename, const char *data)
 {
 	// Ouvrir le fichier
@@ -427,9 +493,23 @@ void writeFileData(const char *filename, const char *data)
 	file.close();
 }
 
-/// @brief Lire les données du fichier
-/// @param filename Le nom du fichier
-/// @return La chaine de caractère contenant les données du fichier
+/**
+ * Nom de la fonction :
+ *  @name readFileData
+ * Description de la fonction :
+ *  @brief Fontion pour lire les données d'un fichier JSON
+ * 
+ *  Paramètre(s) d'entrée :
+ *  1. @param filename : le nom du fichier
+ *  
+ * Valeur de retour :
+ *  @return String : les données du fichier
+ * Note(s) :
+ *  @note aucune(s)
+ *
+ * Historique :
+ *  @date 2021-04-13 @author Yanick Labelle initiale du code.
+ */
 String readFileData(const char *filename)
 {
 	String fileData = "";
@@ -455,8 +535,23 @@ String readFileData(const char *filename)
 	return fileData;
 }
 
-/// Programmation du mode modification
-
+/**
+ * Nom de la fonction :
+ *  @name vModificationMode
+ * Description de la fonction :
+ *  @brief Fonction pour modifier les paramètres du bois (Mode modification)
+ * 
+ *  Paramètre(s) d'entrée :
+ *  1. @param pvParameters : paramètres de la fonction
+ *  
+ * Valeur de retour :
+ *  @return void
+ * Note(s) :
+ *  @note aucune(s)
+ *
+ * Historique :
+ *  @date 2021-04-13 @author Yanick Labelle initiale du code.
+ */
 void vModificationMode(void *pvParameters)
 {
 	// Recevoir les paramètres par le clavier numérique
@@ -464,8 +559,24 @@ void vModificationMode(void *pvParameters)
 	updateWood(1, 100, 200);
 }
 
-/// Mettre à jour le niveau sonore en dB
-// https://wiki.dfrobot.com/Gravity__Analog_Sound_Level_Meter_SKU_SEN0232
+/**
+ * Nom de la fonction :
+ *  @name vTaskUpdateDb
+ * Description de la fonction :
+ *  @brief Fontion pour lire la valeur du capteur de son, la convertir en décibels et l'envoyer dans une file.
+ * 
+ *  Paramètre(s) d'entrée :
+ *  1. @param pvParameters : paramètres de la fonction
+ *  
+ * Valeur de retour :
+ *  @return void
+ * Note(s) :
+ *  @note Utilisation de ce wiki pour la conversion de la tension en décibels :
+ *        https://wiki.dfrobot.com/Gravity__Analog_Sound_Level_Meter_SKU_SEN0232
+ *
+ * Historique :
+ *  @date 2021-04-13 @author Yanick Labelle initiale du code.
+ */
 void vTaskUpdateDb(void *pvParameters)
 {
 	while (true)
@@ -480,6 +591,25 @@ void vTaskUpdateDb(void *pvParameters)
 }
 
 /// Mettre à jour la température et l'humidité ambiante
+
+
+/**
+ * Nom de la fonction :
+ *  @name vTaskUpdateAmbiantHumidTemp
+ * Description de la fonction :
+ *  @brief Fonction pour mettre à jour la température et l'humidité ambiante et les envoyer dans une file.
+ * 
+ *  Paramètre(s) d'entrée :
+ *  1. @param pvParameters : paramètres de la fonction
+ *  
+ * Valeur de retour :
+ *  @return void
+ * Note(s) :
+ *  @note aucune(s)
+ *
+ * Historique :
+ *  @date 2021-04-13 @author Yanick Labelle initiale du code.
+ */
 void vTaskUpdateAmbiantHumidTemp(void *pvParameters)
 {
 	while (true)
@@ -494,15 +624,31 @@ void vTaskUpdateAmbiantHumidTemp(void *pvParameters)
 	}
 }
 
-/// Mettre à jour l'écran LCD
+/**
+ * Nom de la fonction :
+ *  @name vTaskUpdateLCD
+ * Description de la fonction :
+ *  @brief Fonction pour mettre à jour l'affichage LCD.
+ * 
+ *  Paramètre(s) d'entrée :
+ *  1. @param pvParameters : paramètres de la fonction
+ *  
+ * Valeur de retour :
+ *  @return void
+ * Note(s) :
+ *  @note aucune(s)
+ *
+ * Historique :
+ *  @date 2021-04-13 @author Yanick Labelle initiale du code.
+ */
 void vTaskUpdateLCD(void *pvParameters)
 {
 	while (true)
 	{
-		double dWoodTemp;		 // Définition locale de la température du bois
+		double dWoodTemp;    // Définition locale de la température du bois
 		float fAmbiantHumid; // Définition locale de l'humidité ambiante
 		float fAmbiantTemp;	 // Définition locale de la température ambiante
-		float fDb;					 // Définition locale du niveau sonore en dB
+		float fDb;			 // Définition locale du niveau sonore en dB
 
 		// Récupérer les valeurs des files
 
@@ -535,10 +681,10 @@ void setup()
 	pinMode(SOUND_SENSOR_PIN, INPUT);
 
 	// initialisation de l'écran LCD
-	Adafruit_LiquidCrystal lcd(0x27, 16, 2);
+	Adafruit_LiquidCrystal lcd(0x27);
 
 	// Initialiser l'écran LCD
-	lcd.begin(16, 2); // ÉCran d'une résolution de 16x2
+	lcd.begin(16, 4); // ÉCran d'une résolution de 16x4
 	lcd.clear();
 	lcd.home();
 
