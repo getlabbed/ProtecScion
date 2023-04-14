@@ -94,8 +94,75 @@ byte colPins[COLS] = {5, 4, 3, 2};
 
 Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
 
-/// Affichage de la température du bois
-void vTaskReadTemueWood()
+// ------------------------------------ Initialisation du menu ---------------------------------------
+Menu *menu = new Menu();
+
+/**
+ * Nom de la tâche :
+ *  @name vCreateTaskShowAlert
+ * Description de la tâche :
+ *  @brief Tâche permettant l'initialisation de la tâche vTaskShowAlert
+ * 
+ * Paramètre(s) d'entrée :
+ *  @param pvParameters Paramètres de la tâche
+ *  
+ * Valeur de retour :
+ *  @return void
+ * Note(s) :
+ *  @note aucune(s)
+ *
+ * Historique :
+ *  @date 2021-04-13 @author Olivier David Laplante - Entrée initiale du code.
+ */
+void vCreateTaskShowAlert(char *pcAlertText, uint8_t uiAlertDuration)
+{
+	AlertParams_t *alertParams = (AlertParams_t *)malloc(sizeof(AlertParams_t));
+	alertParams->message = pcAlertText;
+	alertParams->duration = uiAlertDuration;
+	xTaskCreatePinnedToCore(vTaskShowAlert, "vTaskShowAlert", TASK_STACK_SIZE, alertParams, 5, NULL, 1);
+}
+
+/**
+ * Nom de la tâche :
+ *  @name vTaskShowAlert
+ * Description de la tâche	 :
+ *  @brief Tâche permettant d'afficher une alerte sur l'écran LCD utisant "menus.h"
+ * 
+ * Paramètre(s) d'entrée :
+ *  @param pvParameters Paramètres de la tâche
+ *  
+ * Valeur de retour :
+ *  @return void
+ * Note(s) :
+ *  @note aucune(s)
+ *
+ * Historique :
+ *  @date 2021-04-13 @author Olivier David Laplante - Entrée initiale du code.
+ */
+void vTaskShowAlert(void *pvParameters)
+{
+	AlertParams_t *alertParams = (AlertParams_t *)pvParameters;
+	menu->showAlert((char*)alertParams->message, (uint8_t)alertParams->duration);
+}
+
+/**
+ * Nom de la tâche :
+ *  @name vTaskReadTemueWood
+ * Description de la tâche :
+ *  @brief Tâche permettant de lire la température du bois
+ * 
+ * Paramètre(s) d'entrée :
+ *  @param pvParameters Paramètres de la tâche
+ *  
+ * Valeur de retour :
+ *  @return void
+ * Note(s) :
+ *  @note aucune(s)
+ *
+ * Historique :
+ *  @date 2021-04-13 @author Olivier David Laplante - Entrée initiale du code.
+ */
+void vTaskReadTemueWood(void *pvParameters)
 {
 	Adafruit_MLX90614 xIRWoodTempReader = Adafruit_MLX90614();
 	double dWoodTemp = 20;
@@ -113,10 +180,23 @@ void vTaskReadTemueWood()
 	}
 }
 
-/// Programmation des indicateurs lumineux
-
-/// @brief Tâche permettant de mettre à jour l'indicateur lumineux
-/// @param pvParameters Paramètres de la tâche
+/**
+ * Nom de la tâche :
+ *  @name vTasklightIndicator
+ * Description de la tâche :
+ *  @brief Tâche permettant de mettre à jour l'indicateur lumineux
+ * 
+ * Paramètre(s) d'entrée :
+ *  @param pvParameters Paramètres de la tâche
+ *  
+ * Valeur de retour :
+ *  @return void
+ * Note(s) :
+ *  @note aucune(s)
+ *
+ * Historique :
+ *  @date 2021-04-13 @author Olivier David Laplante - Entrée initiale du code.
+ */
 
 void vTaskSetLightIndicator(void *pvParameters)
 {
@@ -144,10 +224,23 @@ void vTaskSetLightIndicator(void *pvParameters)
 	}
 }
 
-/// @brief Tâche permettant d'activer le mode apprentissage
-/// @param pvParameters Paramètres de la tâche
-/// @note Cette tâche est appelée lorsque l'utilisateur appuie sur le bouton C
-
+/**
+ * Nom de la tâche :
+ *  @name vTasklearningMode
+ * Description de la tâche :
+ *  @brief Tâche permettant d'activer le mode apprentissage
+ * 
+ * Paramètre(s) d'entrée :
+ *  @param pvParameters Paramètres de la tâche
+ *  
+ * Valeur de retour :
+ *  @return void
+ * Note(s) :
+ *  @note Cette tâche est appelée lorsque l'utilisateur appuie sur le bouton «C»
+ *
+ * Historique :
+ *  @date 2021-04-13 @author Yanick Labelle initiale du code.
+ */
 void vTasklearningMode(void *pvParameters)
 {
 	// Aller chercher la valeur de la vitesse de la scie dans le fichier de configuration
@@ -177,14 +270,26 @@ void vTasklearningMode(void *pvParameters)
 			}
 		}
 	}
-}
+} 
 
-/// https://github.com/br3ttb/Arduino-PID-Library/blob/master/examples/PID_Basic/PID_Basic.ino
-
-/// @brief Tâche permettant de contrôler la vitesse de la scie
-/// @param pvParameters Paramètres de la tâche
-/// @return void
-
+/**
+ * Nom de la tâche :
+ *  @name vTaskSawControl
+ * Description de la tâche :
+ *  @brief Tâche permettant de contrôler la vitesse de la scie (Mode opération)
+ * 
+ *  Paramètre(s) d'entrée :
+ *  1. @param pvParameters : paramètres de la tâches
+ *  
+ * Valeur de retour :
+ *  @return void
+ * Note(s) :
+ *  @note Code inspiré de :
+ *        https://github.com/br3ttb/Arduino-PID-Library/blob/master/examples/PID_Basic/PID_Basic.ino
+ *
+ * Historique :
+ *  @date 2021-04-13 @author Olivier David Laplante - Entrée initiale du code.
+ */
 void vTaskSawControl(void *pvParameters)
 {
 	// Aller chercher la valeur de la vitesse de la scie dans le fichier de configuration
@@ -211,10 +316,23 @@ void vTaskSawControl(void *pvParameters)
 	}
 }
 
-/// @brief Fonction permettant de convertir un id de bois en un objet de type Wood_
-/// @param id Id du bois
-/// @return Wood_t
-
+/**
+ * Nom de la fonction :
+ *  @name readWood
+ * Description de la fonction :
+ *  @brief Fonction permettant de convertir un id de bois en un objet de type Wood_t
+ * 
+ *  Paramètre(s) d'entrée :
+ *  1. @param id Id du bois
+ *  
+ * Valeur de retour :
+ *  @return wood_t
+ * Note(s) :
+ *  @note aucune(s)
+ *
+ * Historique :
+ *  @date 2021-04-13 @author Yanick Labelle - Entrée initiale du code.
+ */
 Wood_t readWood(int id)
 {
 	Wood_t wood;
@@ -254,6 +372,25 @@ Wood_t readWood(int id)
 	return wood;
 }
 
+/**
+ * Nom de la fonction :
+ *  @name writeWood
+ * Description de la fonction :
+ *  @brief Fonction permettant d'écrire les données d'un bois
+ * 
+ *  Paramètre(s) d'entrée :
+ *  1. @param id Id du bois
+ *  2. @param sawSpeed Vitesse de la scie
+ *  3. @param feedRate Vitesse d'avancement du bois
+ *  
+ * Valeur de retour :
+ *  @return void
+ * Note(s) :
+ *  @note aucune(s)
+ *
+ * Historique :
+ *  @date 2021-04-13 @author Yanick Labelle - Entrée initiale du code.
+ */
 void writeWood(int id, int sawSpeed, int feedRate)
 {
 	// Lire les données du fichier JSON
@@ -296,6 +433,26 @@ void writeWood(int id, int sawSpeed, int feedRate)
 	}
 }
 
+
+/**
+ * Nom de la fonction :
+ *  @name updateWood
+ * Description de la fonction :
+ *  @brief Fonction permettant de mettre à jour les données d'un bois
+ * 
+ *  Paramètre(s) d'entrée :
+ *  1. @param id Id du bois
+ *  2. @param sawSpeed Vitesse de la scie
+ *  3. @param feedRate Vitesse d'avancement du bois
+ *  
+ * Valeur de retour :
+ *  @return void
+ * Note(s) :
+ *  @note aucune(s)
+ *
+ * Historique :
+ *  @date 2021-04-13 @author Yanick Labelle - Entrée initiale du code.
+ */
 void updateWood(int id, int sawSpeed, int feedRate)
 {
 	// Lire le fichier de configuration
@@ -336,6 +493,23 @@ void updateWood(int id, int sawSpeed, int feedRate)
 	}
 }
 
+/**
+ * Nom de la tâche :
+ *  @name vTaskKeypad
+ * Description de la tâche :
+ *  @brief Tâche permettant de gérer le clavier
+ * 
+ *  Paramètre(s) d'entrée :
+ *  1. @param pvParameters : paramètres de la tâches
+ *  
+ * Valeur de retour :
+ *  @return void
+ * Note(s) :
+ *  @note aucune(s)
+ *
+ * Historique :
+ *  @date 2021-04-13 @author Olivier David Laplante - Entrée initiale du code.
+ */
 void vTaskKeypad(void *pvParameters)
 {
 	keypad.setDebounceTime(20);
@@ -466,7 +640,7 @@ void vLcdSetLine(const char *message, int iLine)
  *  @note aucune(s)
  *
  * Historique :
- *  @date 2021-04-13 @author Yanick Labelle initiale du code.
+ *  @date 2021-04-13 @author Yanick Labelle - Entrée initiale du code.
  */
 void writeFileData(const char *filename, const char *data)
 {
@@ -508,7 +682,7 @@ void writeFileData(const char *filename, const char *data)
  *  @note aucune(s)
  *
  * Historique :
- *  @date 2021-04-13 @author Yanick Labelle initiale du code.
+ *  @date 2021-04-13 @author Yanick Labelle - Entrée initiale du code.
  */
 String readFileData(const char *filename)
 {
@@ -550,7 +724,7 @@ String readFileData(const char *filename)
  *  @note aucune(s)
  *
  * Historique :
- *  @date 2021-04-13 @author Yanick Labelle initiale du code.
+ *  @date 2021-04-13 @author Yanick Labelle - Entrée initiale du code.
  */
 void vModificationMode(void *pvParameters)
 {
@@ -560,13 +734,13 @@ void vModificationMode(void *pvParameters)
 }
 
 /**
- * Nom de la fonction :
+ * Nom de la tâche :
  *  @name vTaskUpdateDb
- * Description de la fonction :
+ * Description de la tâche :
  *  @brief Fontion pour lire la valeur du capteur de son, la convertir en décibels et l'envoyer dans une file.
  * 
  *  Paramètre(s) d'entrée :
- *  1. @param pvParameters : paramètres de la fonction
+ *  1. @param pvParameters : paramètres de la tâche
  *  
  * Valeur de retour :
  *  @return void
@@ -594,13 +768,13 @@ void vTaskUpdateDb(void *pvParameters)
 
 
 /**
- * Nom de la fonction :
+ * Nom de la tâche :
  *  @name vTaskUpdateAmbiantHumidTemp
- * Description de la fonction :
- *  @brief Fonction pour mettre à jour la température et l'humidité ambiante et les envoyer dans une file.
+ * Description de la tâche :
+ *  @brief tâche pour mettre à jour la température et l'humidité ambiante et les envoyer dans une file.
  * 
  *  Paramètre(s) d'entrée :
- *  1. @param pvParameters : paramètres de la fonction
+ *  1. @param pvParameters : paramètres de la tâche
  *  
  * Valeur de retour :
  *  @return void
@@ -625,13 +799,13 @@ void vTaskUpdateAmbiantHumidTemp(void *pvParameters)
 }
 
 /**
- * Nom de la fonction :
+ * Nom de la tâche :
  *  @name vTaskUpdateLCD
- * Description de la fonction :
- *  @brief Fonction pour mettre à jour l'affichage LCD.
+ * Description de la tâche :
+ *  @brief tâche pour mettre à jour l'affichage LCD.
  * 
  *  Paramètre(s) d'entrée :
- *  1. @param pvParameters : paramètres de la fonction
+ *  1. @param pvParameters : paramètres de la tâche
  *  
  * Valeur de retour :
  *  @return void
@@ -671,16 +845,12 @@ void vTaskUpdateLCD(void *pvParameters)
 
 void setup()
 {
-	/// ===================== Olivier =====================
-
-	/// ===================== Yanick =====================
-
-	// initialisation des broches
+	// Initialisation des broches
 	pinMode(TEMPERATURE_PIN, INPUT);
 	pinMode(HUMIDITY_PIN, INPUT);
 	pinMode(SOUND_SENSOR_PIN, INPUT);
 
-	// initialisation de l'écran LCD
+	// Initialisation de l'écran LCD
 	Adafruit_LiquidCrystal lcd(0x27);
 
 	// Initialiser l'écran LCD
@@ -688,10 +858,10 @@ void setup()
 	lcd.clear();
 	lcd.home();
 
-	// Initialize serial communication
+	// Initialisation de la communication sérielle
 	Serial.begin(115200);
 
-	// Mount the LittleFS file system
+	// Monter le système de fichiers LittleFS
 	if (!LittleFS.begin())
 	{
 		Serial.println("An error occurred while mounting the LittleFS file system");
