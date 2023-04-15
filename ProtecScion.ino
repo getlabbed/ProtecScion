@@ -60,13 +60,13 @@ QueueHandle_t xQueueLightIndicator;
 #define TASK_STACK_SIZE 2048	// Taille allouée de la pile pour les tâches RTOS ()
 #define VOLTAGE_REFERENCE 3.3 // Tension de rérérence pour le ESP32 Feather
 
-#define TEMPERATURE_PIN 2			// Broche de la température ambiante
-#define HUMIDITY_PIN 3				// Broche de l'humidité ambiante
-#define SOUND_SENSOR_PIN 4		// Broche du niveau sonore
-#define LIGHT_INDICATOR_PIN 5 // Broche de l'indicateur lumineux
-#define SAW_INPUT_PIN 6				// Broche d'entrée de la vitesse de la scie
-#define SAW_CONTROL_PIN_1 7			// Broche de sortie (de controle) PWM pour la vitesse de la scie
-#define SAW_CONTROL_PIN_2 7	
+#define TEMPERATURE_PIN A0			// Broche de la température ambiante
+#define HUMIDITY_PIN A1				// Broche de l'humidité ambiante
+#define SOUND_SENSOR_PIN A2		// Broche du niveau sonore
+#define LIGHT_INDICATOR_PIN 13 // Broche de l'indicateur lumineux
+#define SAW_INPUT_PIN A3				// Broche d'entrée de la vitesse de la scie
+#define SAW_CONTROL_PIN_1 12			// Broche de sortie (de controle) PWM pour la vitesse de la scie
+#define SAW_CONTROL_PIN_2 27	
 
 // ================================== Définition des variables globales ==========================================
 
@@ -855,7 +855,7 @@ void setup()
 	// Initialisation de la communication sérielle
 	Serial.begin(115200);
 
-	menu = new Menu_t(0x27, 20, 4);
+	menu = new Menu_t(33, 15, 32, 20, 4);
 
 	// Monter le système de fichiers LittleFS
 	if (!LittleFS.begin())

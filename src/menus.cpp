@@ -16,7 +16,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 
-Menu_t::Menu_t(uint8_t u8LCDAddress, uint8_t u8LCDColumns, uint8_t u8LCDRows)
+Menu_t::Menu_t(uint8_t dataSPI, uint8_t clockSPI, uint8_t latchSPI, uint8_t u8LCDColumns, uint8_t u8LCDRows)
 {
   this->xMenuState = Init;
 
@@ -25,7 +25,7 @@ Menu_t::Menu_t(uint8_t u8LCDAddress, uint8_t u8LCDColumns, uint8_t u8LCDRows)
   xSemaphoreGive(this->xSemaphoreLCD);
   xSemaphoreGive(this->xSemaphoreAlert);
 
-  this->lcd = new Adafruit_LiquidCrystal(u8LCDAddress);
+  this->lcd = new Adafruit_LiquidCrystal(dataSPI, clockSPI, latchSPI);
   this->lcd->begin(u8LCDColumns, u8LCDRows);
   this->vShowBootScreen();
 }

@@ -36,7 +36,7 @@ private:
 
   void vLCDSetLine(String sText, uint8_t u8Line);
 public:
-  Menu_t(uint8_t u8LCDAddress, uint8_t u8LCDColumns, uint8_t u8LCDRows);
+  Menu_t(uint8_t dataSPI, uint8_t clockSPI, uint8_t latchSPI, uint8_t u8LCDColumns, uint8_t u8LCDRows);
 
   void vShowPrompt(String sPromptTitle, String sPromptText);
   void vPromptAppend(String sText);
