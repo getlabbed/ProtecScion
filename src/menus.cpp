@@ -79,11 +79,11 @@ void Menu_t::vShowPrompt(String sPromptTitle, String sPromptText)
 void Menu_t::vPromptAppend(String sText)
 {
   // ajouter le texte au buffer seulement si la longueur est inférieure à 20
-  if(sPromptInputBuffer.length() + sText.length() < 20) {
+  if(this->sPromptTextBuffer.length() + this->sPromptInputBuffer.length() + sText.length() < 20) {
     this->sPromptInputBuffer += sText;
   }
 
-  this->vLCDSetLine(this->sPromptInputBuffer, 1);
+  this->vLCDSetLine((this->sPromptTextBuffer) + (this->sPromptInputBuffer), 1);
 }
 
 void Menu_t::vPromptBackspace()
@@ -93,7 +93,7 @@ void Menu_t::vPromptBackspace()
     this->sPromptInputBuffer.remove(this->sPromptInputBuffer.length() - 1);
   }
 
-  this->vLCDSetLine(this->sPromptInputBuffer, 1);
+  this->vLCDSetLine((this->sPromptTextBuffer) + (this->sPromptInputBuffer), 1);
 }
 
 String Menu_t::sPromptGetInput()
@@ -116,9 +116,6 @@ void Menu_t::vShowMenu(String sTitle)
 
 void Menu_t::vUpdateInfo(float fSoundLevel, float fTempAmbi, float fHumidityAmbi, float fWoodTemp)
 {
-  // si le mode est différent de l'opération, on ne fait rien
-  if(this->xMenuState != Operation) return;
-
   // afficher le niveau de son avec 4 décimales utilisant String sur la ligne 1
   this->vLCDSetLine("Son: " + String(fSoundLevel, 4) + "dB", 1);
 

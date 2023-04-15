@@ -6,7 +6,7 @@
  * restrictions:
  *  Pour type de carte ESP32 Feather
  * Historique :
- *  @date 2021-04-13 @author Olivier David Laplante @author Yanick Labelle - Entrée initiale du code.
+ *  @date 2023-04-13 @author Olivier David Laplante @author Yanick Labelle - Entrée initiale du code.
  *  @note Utilisation de Doxygen pour la documentation:
  *         https://www.doxygen.nl/manual/docblocks.html
  */
@@ -65,12 +65,13 @@ QueueHandle_t xQueueLightIndicator;
 #define SOUND_SENSOR_PIN 4		// Broche du niveau sonore
 #define LIGHT_INDICATOR_PIN 5 // Broche de l'indicateur lumineux
 #define SAW_INPUT_PIN 6				// Broche d'entrée de la vitesse de la scie
-#define SAW_OUTPUT_PIN 7			// Broche de sortie PWM pour la vitesse de la scie
+#define SAW_CONTROL_PIN_1 7			// Broche de sortie (de controle) PWM pour la vitesse de la scie
+#define SAW_CONTROL_PIN_2 7	
 
 // ================================== Définition des variables globales ==========================================
 
 // Définition des variables pour le PID
-double dWantedSawSpeed, dSawInput, dSawOutput;
+double dWantedSawSpeed, dSawInput, dSawOutput, dfeedRate;
 double Kp = 2, Ki = 5, Kd = 1;
 
 int sumSawSpeed, readingCount; // Définition des variables pour le calcul de la vitesse moyenne de la scie
@@ -112,13 +113,13 @@ Menu_t *menu;
  *  @note aucune(s)
  *
  * Historique :
- *  @date 2021-04-13 @author Olivier David Laplante - Entrée initiale du code.
+ *  @date 2023-04-13 @author Olivier David Laplante - Entrée initiale du code.
  */
 void vCreateTaskShowAlert(String sAlertText, uint8_t uiAlertDuration)
 {
 	AlertParams_t *alertParams = (AlertParams_t *)malloc(sizeof(AlertParams_t));
 	alertParams->sText = sAlertText;
-	alertParams->u8DurationMs = uiAlertDuration;
+	alertParams->u16DurationMs = uiAlertDuration;
 	xTaskCreatePinnedToCore(vTaskShowAlert, "vTaskShowAlert", TASK_STACK_SIZE, alertParams, 2, NULL, 1);
 }
 
@@ -137,11 +138,11 @@ void vCreateTaskShowAlert(String sAlertText, uint8_t uiAlertDuration)
  *  @note aucune(s)
  *
  * Historique :
- *  @date 2021-04-13 @author Olivier David Laplante - Entrée initiale du code.
+ *  @date 2023-04-13 @author Olivier David Laplante - Entrée initiale du code.
  */
-void vTaskShowAlert(AlertParams_t *alertParams)
+void vTaskShowAlert(void *alertParams)
 {
-	menu->showAlert(alertParams->sText, alertParams->u8DurationMs);
+	menu->vShowAlert(((AlertParams_t*)alertParams)->sText, ((AlertParams_t*)alertParams)->u16DurationMs);
 }
 
 
@@ -160,7 +161,7 @@ void vTaskShowAlert(AlertParams_t *alertParams)
  *  @note aucune(s)
  *
  * Historique :
- *  @date 2021-04-13 @author Olivier David Laplante - Entrée initiale du code.
+ *  @date 2023-04-13 @author Olivier David Laplante - Entrée initiale du code.
  */
 
 void vTaskSetLightIndicator(void *pvParameters)
@@ -204,14 +205,15 @@ void vTaskSetLightIndicator(void *pvParameters)
  *  @note Cette tâche est appelée lorsque l'utilisateur appuie sur le bouton «C»
  *
  * Historique :
- *  @date 2021-04-13 @author Yanick Labelle initiale du code.
+ *  @date 2023-04-13 @author Yanick Labelle initiale du code.
  */
-void vTasklearningMode(void *pvParameters)
+void vTaskLearningMode(void *pvParameters)
 {
 	// Aller chercher la valeur de la vitesse de la scie dans le fichier de configuration
 	sumSawSpeed = 0;
 	readingCount = 0;
 	setSawSpeed(4095); // Définir la vitesse maximale de la scie
+	EventBits_t eventBits;
 
 	dSawInput = analogRead(SAW_INPUT_PIN);
 	while (dSawInput < 4000)
@@ -220,7 +222,13 @@ void vTasklearningMode(void *pvParameters)
 	}
 	while (true)
 	{
-		if (dSawInput >= 4000)
+		if(ulTaskNotifyTake(pdTRUE, 0) == 1) // Si la notification est reçue
+		{
+			vTaskDelete(NULL); // Supprimer la tâche
+		}
+
+
+		if (dSawInput >= 4000) // Atten
 		{
 			// Faire la moyenne des valeurs de la vitesse de la scie
 			sumSawSpeed += dSawInput;
@@ -253,14 +261,16 @@ void vTasklearningMode(void *pvParameters)
  *        https://github.com/br3ttb/Arduino-PID-Library/blob/master/examples/PID_Basic/PID_Basic.ino
  *
  * Historique :
- *  @date 2021-04-13 @author Olivier David Laplante - Entrée initiale du code.
+ *  @date 2023-04-13 @author Olivier David Laplante - Entrée initiale du code.
  */
-void vTaskSawControl(void *pvParameters)
+void vTaskSawControl(void *id)
 {
-	// Aller chercher la valeur de la vitesse de la scie dans le fichier de configuration
+	// initialisation du PID
+	PID myPID(&dSawInput, &dSawOutput, &dWantedSawSpeed, Kp, Ki, Kd, 1, DIRECT);
 
-	dWantedSawSpeed = readWood(id).sawSpeed; // Définir la vitesse désirée de la scie (0-4095)
-	dfeedRate = readWood(id).feedRate;	     // Définir la vitesse d'avancement du bois
+	// Aller chercher la valeur de la vitesse de la scie dans le fichier de configuration
+	dWantedSawSpeed = readWood(*(int*)id).sawSpeed; // Définir la vitesse désirée de la scie (0-4095)
+	dfeedRate = readWood(*(int*)id).feedRate;	     // Définir la vitesse d'avancement du bois
 
 	// Configuration du PID
 	myPID.SetMode(AUTOMATIC);
@@ -281,6 +291,12 @@ void vTaskSawControl(void *pvParameters)
 	}
 }
 
+void setSawSpeed(int speed)
+{
+	analogWrite(SAW_CONTROL_PIN_1, speed);
+	analogWrite(SAW_CONTROL_PIN_2, LOW);
+}
+
 /**
  * Nom de la fonction :
  *  @name readWood
@@ -296,7 +312,7 @@ void vTaskSawControl(void *pvParameters)
  *  @note aucune(s)
  *
  * Historique :
- *  @date 2021-04-13 @author Yanick Labelle - Entrée initiale du code.
+ *  @date 2023-04-13 @author Yanick Labelle - Entrée initiale du code.
  */
 Wood_t readWood(int id)
 {
@@ -328,7 +344,7 @@ Wood_t readWood(int id)
 				break;
 			}
 			else{
-				return false; // Retourner faux si le bois n'est pas trouvé
+				strncpy(wood.name, "NULL", sizeof(wood.name) - 1); // Si le bois n'est pas trouvé, retourner avec un nom NULL
 			}
 		}
 	}
@@ -357,7 +373,7 @@ Wood_t readWood(int id)
  *  @note aucune(s)
  *
  * Historique :
- *  @date 2021-04-13 @author Yanick Labelle - Entrée initiale du code.
+ *  @date 2023-04-13 @author Yanick Labelle - Entrée initiale du code.
  */
 void writeWood(int id, int sawSpeed, int feedRate)
 {
@@ -393,7 +409,7 @@ void writeWood(int id, int sawSpeed, int feedRate)
 		serializeJson(doc, modifiedData);
 
 		// Sauvegarder les données modifiées dans le fichier
-		saveFileData("/wood.json", modifiedData);
+		writeFileData("/wood.json", modifiedData);
 	}
 	else
 	{
@@ -418,7 +434,7 @@ void writeWood(int id, int sawSpeed, int feedRate)
  *  @note aucune(s)
  *
  * Historique :
- *  @date 2021-04-13 @author Yanick Labelle - Entrée initiale du code.
+ *  @date 2023-04-13 @author Yanick Labelle - Entrée initiale du code.
  */
 void updateWood(int id, int sawSpeed, int feedRate)
 {
@@ -452,7 +468,7 @@ void updateWood(int id, int sawSpeed, int feedRate)
 		serializeJson(doc, modifiedData);
 
 		// Save the modified JSON data back to the file
-		saveFileData("/wood.json", modifiedData);
+		writeFileData("/wood.json", modifiedData);
 	}
 	else
 	{
@@ -460,7 +476,211 @@ void updateWood(int id, int sawSpeed, int feedRate)
 	}
 }
 
-void v
+
+
+
+/**
+ * Nom de la fonction :
+ *  @name vSpawnThreads
+ * Description de la fonction :
+ *  @brief Fonction permettant de créer les tâches nécessaires au fonctionnement du programme
+ *
+ *  Paramètre(s) d'entrée :
+ *  1. @param operationMode Mode d'opération du programme
+ *                          true = Mode Opération, false = Mode apprentissage
+ *
+ * Valeur de retour :
+ *  @return void
+ * Note(s) :
+ *  @note aucune(s)
+ *
+ * Historique :
+ *  @date 2023-04-14 @author Olivier David Laplante - Entrée initiale du code.
+ */
+void vSpawnThreads(bool operationMode, int *piIdWood)
+{
+	// vTaskUpdateLCD
+	xTaskCreatePinnedToCore(
+		vTaskUpdateLCD,		/* Tâche à exécuter */
+		"vTaskUpdateLCD",	/* Nom de la tâche */
+		TASK_STACK_SIZE,	/* Taille de la pile de la tâche */
+		NULL,				/* paramètres de la tâche */
+		2,					/* priorité de la tâche */
+		&HandleUpdateLCD,				/* handler de la tâche */
+		1);					/* coeur de la tâche */
+
+	if(operationMode){ // Activation du mode opération
+		xTaskCreatePinnedToCore(
+			vTaskSawControl,	/* Tâche à exécuter */
+			"vTaskSawControl",	/* Nom de la tâche */
+			TASK_STACK_SIZE,	/* Taille de la pile de la tâche */
+			piIdWood,				/* paramètres de la tâche */
+			2,					/* priorité de la tâche */
+			&HandleSawControl,				/* handler de la tâche */
+			0);					/* coeur de la tâche */
+	} else { // Activation du mode apprentissage
+		xTaskCreatePinnedToCore(
+			vTaskLearningMode,	/* Tâche à exécuter */
+			"vTaskLearningMode",/* Nom de la tâche */
+			TASK_STACK_SIZE,	/* Taille de la pile de la tâche */
+			NULL,				/* paramètres de la tâche */
+			2,					/* priorité de la tâche */
+			&HandleLearningMode,				/* handler de la tâche */
+			0);					/* coeur de la tâche */
+	}
+}
+
+/**
+ * Nom de la fonction :
+ *  @name vTaskUpdateLCD
+ * Description de la fonction :
+ *  @brief Fonction permettant de mettre à jour l'affichage du LCD
+ *
+ *  Paramètre(s) d'entrée :
+ *  1. @param pvParameters Paramètres de la tâche
+ *
+ * Valeur de retour :
+ *  @return void
+ * Note(s) :
+ *  @note aucune(s)
+ *
+ * Historique :
+ *  @date 2023-04-14 @author Olivier David Laplante - Entrée initiale du code.
+ */
+void vKeypadCallback(char key, Wood_t* wood) {
+		if (!keypad.isPressed(key))
+			return;
+
+		if (isDigit(key)) {
+			if (menu->xMenuState == PromptWoodId || menu->xMenuState == PromptSawSpeed || menu->xMenuState == PromptFeedRate) {
+				menu->vPromptAppend(String(key));
+			}
+		} else if (isAlpha(key)) { // s'assurer que la touche est une lettre (Modes) (A, B, C, D)
+			// si la touche est D et que le menu est en mode promptSawSpeed ou promptFeedRate
+
+			// si le menu est en mode prompt
+			if (menu->xMenuState == PromptWoodId) {
+				*wood = readWood(menu->sPromptGetInput().toInt());
+				// si la touche est A
+				if (key == 'A') { // Mode modification
+					if((*wood).name == "NULL") {
+						vCreateTaskShowAlert("Bois introuvable", 1000);
+						return;
+					}
+					menu->vPromptClearInput();
+					menu->xMenuState = PromptSawSpeed;
+					menu->vShowPrompt("Vitesse de scie", "Vitesse: ");
+					// changer int to string
+					menu->vPromptAppend(String((*wood).sawSpeed));
+				} else if (key == 'B') { // Mode manuel
+					if((*wood).name != "NULL") {
+						vCreateTaskShowAlert("Bois déjà existant", 1000);
+						return;
+					}
+					*wood = Wood_t{"CREATE", (menu->sPromptGetInput().toInt()), 0, 0};
+					menu->vPromptClearInput();
+					menu->xMenuState = PromptSawSpeed;
+					menu->vShowPrompt("Vitesse de scie", "Vitesse: ");
+				} else if (key == 'C') { // Mode apprentissage
+				  if((*wood).name == "NULL") {
+						vCreateTaskShowAlert("Bois introuvable", 1000);
+						return;
+					}
+					
+					menu->vPromptClearInput();
+
+					menu->vShowMenu((*wood).name);
+					*wood = Wood_t{"NULL", 0, 0, 0};
+					menu->xMenuState = Learning;
+
+					vSpawnThreads(false, nullptr);
+					
+				} else if (key == 'D') { // Mode opération
+					if((*wood).name == "NULL") {
+						vCreateTaskShowAlert("Bois introuvable", 1000);
+						return;
+					}
+					menu->vPromptClearInput();
+				
+					menu->vShowMenu((*wood).name);
+					menu->xMenuState = Operation;
+
+					vSpawnThreads(true, &(*wood).code);
+
+					*wood = Wood_t{"NULL", 0, 0, 0};
+				}
+			} else if(menu->xMenuState == PromptSawSpeed) {
+				// si la touche est D, passer au promptFeedRate
+				if (key == 'D') {
+					// vérifier si le prompt est valide
+					if(menu->sPromptGetInput().toInt() < 0 || menu->sPromptGetInput().toInt() > 100) {
+						vCreateTaskShowAlert("Valeur invalide", 1000);
+						return;
+					}
+					
+					// modifier le bois
+					(*wood).sawSpeed = menu->sPromptGetInput().toInt();
+					menu->vPromptClearInput();
+
+					menu->xMenuState = PromptFeedRate;
+					menu->vShowPrompt("Vitesse d'avancement", "Vitesse: ");
+					menu->vPromptAppend(String((*wood).feedRate));
+				} else if (key == 'A') {
+					*wood = Wood_t{"NULL", 0, 0, 0};
+					menu->vPromptClearInput();
+					menu->xMenuState = PromptWoodId;
+					menu->vShowPrompt("ID du bois: ", "ID: ");
+				}
+			} else if(menu->xMenuState == PromptFeedRate) {
+				// si la touche est D, passer au promptFeedRate
+				if (key == 'D') {
+					// vérifier si le prompt est valide
+					if(menu->sPromptGetInput().toInt() < 0 || menu->sPromptGetInput().toInt() > 100) {
+						vCreateTaskShowAlert("Valeur invalide", 1000);
+						return;
+					}
+
+					// modifier le bois
+					(*wood).feedRate = menu->sPromptGetInput().toInt();
+					menu->vPromptClearInput();
+
+					// sauvegarder le bois
+					if ((*wood).name == "CREATE") {
+						writeWood((*wood).code, (*wood).sawSpeed, (*wood).feedRate);
+					} else {
+						updateWood((*wood).code, (*wood).sawSpeed, (*wood).feedRate);
+					}
+					*wood = Wood_t{"NULL", 0, 0, 0};
+				} else if (key == 'A') {
+					*wood = Wood_t{"NULL", 0, 0, 0};
+					menu->vPromptClearInput();
+					menu->xMenuState = PromptSawSpeed;
+				}
+			}
+
+		} else {
+			if(key == '*') { // si la touche clear est appuyée et que le menu est en mode prompt
+				if (menu->xMenuState == PromptWoodId || menu->xMenuState == PromptSawSpeed || menu->xMenuState == PromptFeedRate) {
+					menu->vPromptBackspace(); // retirer le dernier caractère du prompt
+				} else if (menu->xMenuState == Learning || menu->xMenuState == Operation) {
+					if(menu->xMenuState == Operation) vTaskDelete(HandleSawControl);
+					if(menu->xMenuState == Learning) xTaskNotify(HandleLearningMode, 0, eSetValueWithOverwrite);
+					vTaskDelete(HandleUpdateLCD);
+					menu->xMenuState = PromptWoodId;
+				}
+			} else {
+				// selon le mode du menu, afficher une alerte avec vCreateTaskShowAlert d'une seconde expliquant le prompt
+				if (menu->xMenuState == PromptWoodId) {
+					vCreateTaskShowAlert("Entrez l'ID du bois", 1000);
+				} else if (menu->xMenuState == PromptSawSpeed) {
+					vCreateTaskShowAlert("Vitesse (0-100%)", 1000);
+				} else if (menu->xMenuState == PromptFeedRate) {
+					vCreateTaskShowAlert("Vitesse (0-100%)", 1000);
+				}
+			}
+		}
+
+}
 
 /**
  * Nom de la tâche :
@@ -477,133 +697,16 @@ void v
  *  @note aucune(s)
  *
  * Historique :
- *  @date 2021-04-13 @author Olivier David Laplante - Entrée initiale du code.
+ *  @date 2023-04-13 @author Olivier David Laplante - Entrée initiale du code.
  */
+Wood_t globalWood;
 void vTaskKeypad(void *pvParameters)
 {
 	keypad.setDebounceTime(20);
-	
-	Wood_t wood;
 
+	// créer une fonction de callback pour le clavier
 	keypad.addEventListener([](char key) {
-		if (!keypad.isPressed(key))
-			return;
-
-		if (isDigit(key)) {
-			if (menu->MenuState == PromptWoodId || menu->MenuState == PromptSawSpeed || menu->MenuState == PromptFeedRate) {
-				menu->vPromptAppend(key);
-			}
-		} else if (isAlpha(key)) { // s'assurer que la touche est une lettre (Modes) (A, B, C, D)
-			// si la touche est D et que le menu est en mode promptSawSpeed ou promptFeedRate
-
-			// si le menu est en mode prompt
-			if (menu->MenuState == PromptWoodId) {
-				wood = readWood(menu->sPromptGetInput().toInt());
-				// si la touche est A
-				if (key == 'A') { // Mode modification
-					if(!wood) {
-						vCreateTaskShowAlert("Bois introuvable", 1000);
-						return;
-					}
-					menu->vPromptClear();
-					menu->MenuState = PromptSawSpeed;
-				} else if (key == 'B') { // Mode manuel
-					if(wood) {
-						vCreateTaskShowAlert("Bois déjà existant", 1000);
-						return;
-					}
-					wood = {menu->sPromptGetInput().toInt(), "CREATE", 0, 0};
-					menu->vPromptClear();
-					menu->MenuState = PromptSawSpeed;
-				} else if (key == 'C') { // Mode apprentissage
-				  if(!wood) {
-						vCreateTaskShowAlert("Bois introuvable", 1000);
-						return;
-					}
-					
-					menu->vPromptClear();
-
-					menu->vShowMenu(wood.name);
-					wood = false;
-
-					// créer la tâche d'apprentissage
-					xTaskCreatePinnedToCore(vTasklearningMode, "Mode apprentissage", TASK_STACK_SIZE, NULL, 2, &HandleLearningMode, 0);	
-					menu->MenuState = Learning;
-				} else if (key == 'D') { // Mode opération
-					if(!wood) {
-						vCreateTaskShowAlert("Bois introuvable", 1000);
-						return;
-					}
-					menu->vPromptClear();
-				
-					menu->vShowMenu(wood.name);
-					wood = false;
-					// créer la tâche d'opération
-					xTaskCreatePinnedToCore(vTaskSawControl, "Mode opération", TASK_STACK_SIZE, NULL, 2, &HandleSawControl, 0);
-					menu->MenuState = Operation;
-				}
-			} else if(menu->MenuState == PromptSawSpeed) {
-				// si la touche est D, passer au promptFeedRate
-				if (key == 'D') {
-					// verifier si le prompt est valide
-					if(menu->sPromptGetInput().toInt() < 0 || menu->sPromptGetInput().toInt() > 100) {
-						vCreateTaskShowAlert("Valeur invalide", 1000);
-						return;
-					}
-					
-					// modifier le bois
-					wood.sawSpeed = menu->sPromptGetInput().toInt();
-					menu->vPromptClear();
-
-					menu->MenuState = PromptFeedRate;
-				} else if (key == 'A') {
-					wood = false;
-					menu->vPromptClear();
-					menu->MenuState = PromptWoodId;
-				}
-			} else if(menu->MenuState == PromptFeedRate) {
-				// si la touche est D, passer au promptFeedRate
-				if (key == 'D') {
-					// verifier si le prompt est valide
-					if(menu->sPromptGetInput().toInt() < 0 || menu->sPromptGetInput().toInt() > 100) {
-						vCreateTaskShowAlert("Valeur invalide", 1000);
-						return;
-					}
-
-					// modifier le bois
-					wood.feedRate = menu->sPromptGetInput().toInt();
-					menu->vPromptClear();
-
-					// sauvegarder le bois
-					if (wood.name == "CREATE") {
-						writeWood(wood.id, wood.sawSpeed, wood.feedRate);
-					} else {
-						updateWood(wood.id, wood.sawSpeed, wood.feedRate);
-					}
-					wood = false;
-				} else if (key == 'A') {
-					wood = false;
-					menu->vPromptClear();
-					menu->MenuState = PromptSawSpeed;
-				}
-			}
-
-		} else {
-			if(key == '*') { // si la touche clear est appuyée et que le menu est en mode prompt
-				if (menu->MenuState == PromptWoodId || menu->MenuState == PromptSawSpeed || menu->MenuState == PromptFeedRate) {
-					menu->vPromptBackspace(); // retirer le dernier caractère du prompt
-				}
-			} else {
-				// selon le mode du menu, afficher une alerte avec vCreateTaskShowAlert d'une seconde expliquant le prompt
-				if (menu->MenuState == PromptWoodId) {
-					vCreateTaskShowAlert("Entrez l'ID du bois", 1000);
-				} else if (menu->MenuState == PromptSawSpeed) {
-					vCreateTaskShowAlert("Vitesse scie", 1000);
-				} else if (menu->MenuState == PromptFeedRate) {
-					vCreateTaskShowAlert("Vitesse d'avancement", 1000);
-				}
-			}
-		}
+		vKeypadCallback(key, &globalWood);
 	});
 
 	// Attendre 3 secondes avant de commencer la tâche
@@ -614,7 +717,7 @@ void vTaskKeypad(void *pvParameters)
 	while (true)
 	{
 		// Mettre a jour la liste des touches
-		keypad.updateList();
+		keypad.getKeys();
 		// Ajouter un délai pour éviter de lire trop rapidement
 		vTaskDelay(pdMS_TO_TICKS(50));
 	}
@@ -638,9 +741,9 @@ void vTaskKeypad(void *pvParameters)
  *  @note aucune(s)
  *
  * Historique :
- *  @date 2021-04-13 @author Yanick Labelle - Entrée initiale du code.
+ *  @date 2023-04-13 @author Yanick Labelle - Entrée initiale du code.
  */
-void writeFileData(const char *filename, const char *data)
+void writeFileData(String filename, String data)
 {
 	// Ouvrir le fichier
 	File file = LittleFS.open(filename, "w");
@@ -680,7 +783,7 @@ void writeFileData(const char *filename, const char *data)
  *  @note aucune(s)
  *
  * Historique :
- *  @date 2021-04-13 @author Yanick Labelle - Entrée initiale du code.
+ *  @date 2023-04-13 @author Yanick Labelle - Entrée initiale du code.
  */
 String readFileData(const char *filename)
 {
@@ -730,8 +833,8 @@ void vTaskUpdateLCD(void *pvParameters)
 		dWoodTemp = xIRWoodTempReader.readObjectTempC();
 
 		// Récupérer l'humidité et la température ambiante
-		uiTemp = digitalRead(TEMPERATURE_PIN);
-		uiHumid = digitalRead(HUMIDITY_PIN);
+		uiTemp = analogRead(TEMPERATURE_PIN);
+		uiHumid = analogRead(HUMIDITY_PIN);
 
 		// Récupérer le niveau sonore en dB
 
@@ -739,7 +842,7 @@ void vTaskUpdateLCD(void *pvParameters)
 		fSoundSensorValue = fSoundSensorVoltage * 50.0; // conversion de la tension en décibels
 
 		// Afficher les valeurs sur l'écran LCD
-		menu->vUpdateInfo((fDb, fAmbiantHumid, fAmbiantTemp, (float)dWoodTemp));
+		menu->vUpdateInfo(fDb, fAmbiantHumid, fAmbiantTemp, (float)dWoodTemp);
 
 		// Attendre 1 seconde
 		vTaskDelay(pdMS_TO_TICKS(1000));
@@ -752,12 +855,7 @@ void setup()
 	// Initialisation de la communication sérielle
 	Serial.begin(115200);
 
-	menu = new Menu(0x27, 20, 4);
-
-	// Initialisation des broches
-	pinMode(TEMPERATURE_PIN, INPUT);
-	pinMode(HUMIDITY_PIN, INPUT);
-	pinMode(SOUND_SENSOR_PIN, INPUT);
+	menu = new Menu_t(0x27, 20, 4);
 
 	// Monter le système de fichiers LittleFS
 	if (!LittleFS.begin())

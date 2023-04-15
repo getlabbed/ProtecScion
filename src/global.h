@@ -58,7 +58,7 @@ void vTasksetLightIndicator(void *pvParameters);
 int writeWood(Wood_t);
 
 /// Programmation du mode opération (asservissement, anti-recul)
-void setSawSpeed(int);
+void setSawSpeed(int speed);
 int readSawSpeed();
 int readWoodSpeed();
 Wood_t readWood(int);
@@ -84,7 +84,7 @@ void vTaskUpdateAmbiantHumidTemp(void *pvParameters);
 void vTaskUpdateDb(void *pvParameters);
 
 /// Programmation du mode apprentissage
-void vTasklearningMode(void *pvParameters);
+void vTaskLearningMode(int id);
 
 /// Programmation du mode modification
 void vModificationMode(void *pvParameters);

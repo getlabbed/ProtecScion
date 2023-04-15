@@ -46,17 +46,12 @@ public:
   
   void vShowMenu(String sTitle);
 
-  void vUpdateInfo(float fSoundLevel, float fTempAmbi, float fHumidityAmbi, float fTempWood);
+  void vUpdateInfo(float fDb, float fAmbiantHumid, float fAmbiantTemp, float dWoodTemp);
 
   void vShowAlert(String sText, uint16_t u16DurationMs);
 
   MenuState_t xMenuState;
 };
-
-
-
-
-
 
 
 
