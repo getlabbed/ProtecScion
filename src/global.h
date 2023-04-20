@@ -14,10 +14,9 @@
 #ifndef GLOBAL_H
 #define GLOBAL_H
 
-/// Inclusion
-#include "../libs/debugger/debug.h"
+#include <Arduino.h>
 
-/// Typedefs
+/// Typedef
 
 /// ===================== Olivier =====================
 
