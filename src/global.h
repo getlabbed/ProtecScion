@@ -16,6 +16,13 @@
 
 #include <Arduino.h>
 
+#include "SoundSensor.ino"
+#include "spi_fs.ino"
+#include "LCDscreen.ino"
+#include "ModeOperation.ino"
+
+#define TASK_STACK_SIZE 4096
+
 /// Typedef
 
 /// ===================== Olivier =====================
