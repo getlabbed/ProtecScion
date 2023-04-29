@@ -1,8 +1,8 @@
 
 #include <PID_v2.h>
 
-#define PIN_MOTOR 26
-#define PIN_SENSE 25
+#define PIN_MOTOR 25 // A1
+#define PIN_SENSE 26 // A0
 
 double Kp = 2, Ki = 5, Kd = 1;
 PID_v2 myPID(Kp, Ki, Kd, PID::Direct);
