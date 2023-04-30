@@ -17,9 +17,11 @@
 #include <Arduino.h>
 
 #include "SoundSensor.ino"
-#include "spi_fs.ino"
+#include "SPIFFS.ino"
 #include "LCDscreen.ino"
 #include "ModeOperation.ino"
+#include "ModeManuel.ino"
+#include "ModeModification.ino"
 
 #define TASK_STACK_SIZE 4096
 
