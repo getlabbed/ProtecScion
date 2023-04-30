@@ -3,7 +3,11 @@
 #define TRIG A1
 #define ECHO A2
 #define BUFFER_SIZE 5
-#define MAX_SPEED_CHANGE 5.00 // m/ms, assuming a maximum speed change of 15 m/s
+#define MAX_SPEED_CHANGE 0.100 // m/ms, assuming a maximum speed change of 15 m/s
+#define MIN_SPEED_CHANGE 0.001 // m/ms, filter out noise when the object is not moving
+
+double averageSpeed = 0;
+int averageCount = 0;
 
 long duration;
 int distance, prevDistance;
@@ -44,34 +48,45 @@ void updateBuffer(int value) {
 }
 
 bool isValidDistance(int newDistance, int prevDistance, unsigned long elapsedTime) {
+  float change = abs(newDistance - prevDistance);
   float maxChange = MAX_SPEED_CHANGE * elapsedTime;
-  return abs(newDistance - prevDistance) <= maxChange;
+  float minChange = MIN_SPEED_CHANGE * elapsedTime;
+  return change <= maxChange && change >= minChange;
 }
 
 void loop() {
-  int newDistance = readDistance();
+  averageCount = 0;
+  averageSpeed = 0;
+  while(averageCount <= 10){
+    int newDistance = readDistance();
 
-  unsigned long currentTime = millis();
-  unsigned long elapsedTime = currentTime - prevTime;
+    unsigned long currentTime = millis();
+    unsigned long elapsedTime = currentTime - prevTime;
 
-  if (isValidDistance(newDistance, prevDistance, elapsedTime)) {
-    updateBuffer(newDistance);
-    distance = calculateAverageDistance();
+    if (isValidDistance(newDistance, prevDistance, elapsedTime)) {
+      updateBuffer(newDistance);
+      distance = calculateAverageDistance();
 
-    if (bufferIndex > BUFFER_SIZE) {
-      if (bufferIndex % 10 == 0) { // Calculate speed every 10 iterations
-        float instantaneousSpeed = (float)(newDistance - prevDistance) / elapsedTime;
+      if (bufferIndex > BUFFER_SIZE) {
+        float instantaneousSpeed = abs((float)(newDistance - prevDistance) / elapsedTime)*1000;
+
+        averageSpeed += instantaneousSpeed;
+        averageCount += 1;
 
         Serial.print("Distance: ");
         Serial.println(distance);
         Serial.print("Instantaneous Speed: ");
         Serial.println(instantaneousSpeed);
       }
+
+      prevDistance = newDistance;
+      prevTime = currentTime;
     }
 
-    prevDistance = newDistance;
-    prevTime = currentTime;
+    delay(500); // Adjust the delay as needed to reduce noise
   }
-
-  delay(10); // Reduced delay to 10 milliseconds
+  Serial.print("==== ==== ");
+  int average = averageSpeed / averageCount;
+  Serial.print(average);
+  Serial.println(" ==== ====");
 }

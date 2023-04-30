@@ -22,6 +22,7 @@ void setup()
   analogWriteResolution(8);
   analogWriteFrequency(200);
 	myPID.Start(analogRead(PIN_SENSE), 0, target);
+  myPID.Setpoint(target);
 }
 
 void loop()
