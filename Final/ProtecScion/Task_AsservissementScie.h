@@ -11,7 +11,7 @@
 #define PID_KP 0.8
 #define PID_KI 0.3
 #define PID_KD 0.01
-#define PID_INITIAL_TARGET 2048 // mettre a 0 pour prod
+#define PID_INITIAL_TARGET 0 // mettre a 0 pour prod
 #define PID_SAMPLE_TIME 100
 
 // PWM

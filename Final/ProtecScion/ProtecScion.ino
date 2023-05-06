@@ -18,21 +18,59 @@
 // include tasks
 #include "Task_AsservissementScie.h"
 #include "Task_IOFlash.h"
+#include "Task_SoundSensor.h"
 
 // define handles
 TaskHandle_t xTaskAsservissementScie;
 TaskHandle_t xTaskIOFlash;
+TaskHandle_t xTaskSoundSensor;
+
+// define semaphores
+SemaphoreHandle_t xSemaphoreSerial;
+SemaphoreHandle_t xSemaphoreSPIFFS;
+
+// define queues
+QueueHandle_t xQueueReadWood;
+QueueHandle_t xQueueWriteWood;
+QueueHandle_t xQueueLog;
+QueueHandle_t xQueueSawSpeed;
+
+/// --------- FONCTIONS --------- ///
 
 /** 
  * @fn vCreateAllTasks
- * @brief Create all tasks
+ * @brief Création des tâches
  * 
  * @author Olivier David Laplante @date 30-04-2023
  */
 void vCreateAllTasks() {
-  // create tasks
   xTaskCreatePinnedToCore(vTaskAsservissementScie, "AsservissementScie", TASK_STACK_SIZE, NULL, TASK_ASSERVISSEMENTSCIE_PRIORITY, &xTaskAsservissementScie, TASK_ASSERVISSEMENTSCIE_CORE);
   xTaskCreatePinnedToCore(vTaskIOFlash, "IOFlash", TASK_STACK_SIZE, NULL, TASK_IOFLASH_PRIORITY, &xTaskIOFlash, TASK_IOFLASH_CORE);
+  xTaskCreatePinnedToCore(vTaskSoundSensor, "SoundSensor", TASK_STACK_SIZE, NULL, TASK_SOUNDSENSOR_PRIORITY, &xTaskSoundSensor, TASK_SOUNDSENSOR_CORE);
+}
+
+/** 
+ * @fn vSetupSemaphores
+ * @brief Création des sémaphores
+ * 
+ * @author Olivier David Laplante @date 06-05-2023
+ */
+void vSetupSemaphores() {
+  xSemaphoreSerial = xSemaphoreCreateBinary();
+  xSemaphoreSPIFFS = xSemaphoreCreateBinary();
+}
+
+/** 
+ * @fn vSetupQueues
+ * @brief Création des files
+ * 
+ * @author Olivier David Laplante @date 06-05-2023
+ */
+void vSetupQueues() {
+  xQueueReadWood = xQueueCreate(1, sizeof(Wood_t));
+  xQueueWriteWood = xQueueCreate(1, sizeof(Wood_t));
+  xQueueLog = xQueueCreate(10, sizeof(Log_t));
+  xQueueSawSpeed = xQueueCreate(1, sizeof(unsigned int));
 }
 
 /// --------- SETUP & LOOP --------- ///
@@ -59,6 +97,12 @@ void setup() {
     Serial.println("An Error has occurred while mounting SPIFFS");
     return;
   }
+
+  // setup semaphores
+  vSetupSemaphores();
+
+  // setup queues
+  vSetupQueues();
   
   // setup tasks
   vCreateAllTasks();

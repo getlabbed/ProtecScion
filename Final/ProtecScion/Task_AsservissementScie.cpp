@@ -10,8 +10,8 @@ double lastOutput = 0;
 
 void vTaskAsservissementScie(void *pvParameters) {
   // local variables
-  MotorState_t motorState = INIT; // pas pour prod
-  double target = PID_INITIAL_TARGET; // etre capable de setter pour prod
+  MotorState_t motorState = OFF; // pas pour prod
+  unsigned int target = PID_INITIAL_TARGET; // etre capable de setter pour prod
   // PID instance
   PID_v2 myPID(PID_KP, PID_KI, PID_KD, PID::Direct);
 
@@ -22,9 +22,20 @@ void vTaskAsservissementScie(void *pvParameters) {
   // PID setup
   myPID.Start(analogRead(PIN_SENSE), 0, target);
   myPID.SetSampleTime(PID_SAMPLE_TIME);
-  //myPID.Setpoint(target);
 
   while (true) {
+    if (xQueueReceive(xQueueSawSpeed, &target, 0) == pdTRUE)
+    {
+      if (target == 0 || target > 4096)
+      {
+        motorState = OFF;
+      }
+      else
+      {
+        motorState = INIT;
+      }
+    }
+
     if (motorState == OFF)
     {
       myPID.Setpoint(0);
@@ -103,14 +114,5 @@ bool bIsFastChange(double input, int threshold)
   }
   sumLast /= 4;
 
-  if (abs(sumLast - sum) > threshold)
-  {
-    Serial.println("Fast change detected");
-    Serial.print(sumLast);
-    Serial.print(" - ");
-    Serial.println(sum);
-    result = true;
-  }
-
-  return result;
+  return abs(sumLast - sum) > threshold;
 }

@@ -6,53 +6,31 @@
 
 void vTaskIOFlash(void *pvParameters)
 {
+	// make the task read from the queue every 100ms to write to the file
+	Wood_t wood;
+	Log_t message;
 
-  if (false)  //!SPIFFS.totalBytes() == 0)
-  {
-    // Error mounting SPIFFS
-  } else {
-    // SPIFFS mounted successfully
+	while (1)
+	{
+		// when you receive a notification read the wood from the id from the notification value and write it to the queue
+		if (ulTaskNotifyTake(pdTRUE, 0) > 0)
+		{
+			unsigned int id = ulTaskNotifyValueClear(pdFALSE); // TODO: check if this is the right way to do it
+			readWood(wood, (int)pvParameters);
+			xQueueSend(xQueueWriteWood, &wood, 0);
+		}
 
-    // test
-    writeEmptyFile();
-		Wood_t wood;
-
-		readWood(wood, 1);
-		Serial.println(wood.name);
-		Serial.println(wood.code);
-		Serial.println(wood.sawSpeed);
-		Serial.println(wood.feedRate);
-		readWood(wood, 2);
-		Serial.println(wood.name);
-		Serial.println(wood.code);
-		Serial.println(wood.sawSpeed);
-		Serial.println(wood.feedRate);
-
-		writeWood(1, 100, 100);
-
-		//updateWood(wood, 1, 200, 200);
-		writeWood(2, 300, 300);
-
-		readWood(wood, 1);
-		Serial.println(wood.name);
-		Serial.println(wood.code);
-		Serial.println(wood.sawSpeed);
-		Serial.println(wood.feedRate);
-
-		readWood(wood, 2);
-		// print the return of the function (struct)
-		Serial.println(wood.name);
-		Serial.println(wood.code);
-		Serial.println(wood.sawSpeed);
-		Serial.println(wood.feedRate);
-  }
-
-  //setup();
-  while (true)
-  {
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-		Serial.println("Hello World");
-  }
+		if (xQueueReceive(xQueueWriteWood, &wood, 0) == pdTRUE)
+		{
+			writeWood(wood.code, wood.sawSpeed, wood.feedRate);
+		}
+		
+		if (xQueueReceive(xQueueLog, &message, 0) == pdTRUE)
+		{
+			logMessage(message);
+		}
+		vTaskDelay(100 / portTICK_PERIOD_MS);
+	}
 }
 
 void writeEmptyFile()
@@ -179,4 +157,58 @@ void writeWood(int id, int sawSpeed, int feedRate)
 	{
 		Serial.println("Error reading JSON file data");
 	}
+}
+
+void logMessage(Log_t logMessage)
+{
+	File file = SPIFFS.open("/log.txt", "a");
+	if (!file)
+	{
+		Serial.println("Failed to open file for writing");
+		return;
+	}
+
+	// check if the file is bigger than 100kB
+	if (file.size() > 100000)
+	{
+		Serial.println("File is bigger than 100kB, deleting");
+		file.close();
+		SPIFFS.remove("/log.txt");
+		file = SPIFFS.open("/log.txt", "a");
+	}
+
+	// make a string with the uptime in hh:mm:ss:msmsms format
+	String uptime = String(millis() / 3600000) + ":" + String((millis() / 60000) % 60) + ":" + String((millis() / 1000) % 60) + ":" + String(millis() % 1000);
+	// format the message like a linux kernel log [uptime] logLevel: message
+	String message = "[" + uptime + "] " + logLevelString[logMessage.level] + ": " + logMessage.message;
+
+	if (file.println(message))
+	{
+		Serial.println("File written");
+	}
+	else
+	{
+		Serial.println("Write failed");
+	}
+	file.close();
+}
+
+void dumpLog()
+{
+	File file = SPIFFS.open("/log.txt", "r");
+	if (!file)
+	{
+		Serial.println("Failed to open file for reading");
+		return;
+	}
+
+	// read the file line by line
+	while (file.available())
+	{
+		Serial.write(file.read());
+	}
+	file.close();
+	
+	// delete the file
+	SPIFFS.remove("/log.txt");
 }
