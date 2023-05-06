@@ -9,10 +9,9 @@ double lastInputs[4] = {0,0,0,0};
 double lastOutput = 0;
 
 void vTaskAsservissementScie(void *pvParameters) {
-  Serial.begin(115200); // pas pour prod
   // local variables
-  MotorState_t motorState = INIT;
-  double target = PID_INITIAL_TARGET;
+  MotorState_t motorState = INIT; // pas pour prod
+  double target = PID_INITIAL_TARGET; // etre capable de setter pour prod
   // PID instance
   PID_v2 myPID(PID_KP, PID_KI, PID_KD, PID::Direct);
 

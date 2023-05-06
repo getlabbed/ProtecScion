@@ -32,7 +32,7 @@ TaskHandle_t xTaskIOFlash;
 void vCreateAllTasks() {
   // create tasks
   xTaskCreatePinnedToCore(vTaskAsservissementScie, "AsservissementScie", TASK_STACK_SIZE, NULL, TASK_ASSERVISSEMENTSCIE_PRIORITY, &xTaskAsservissementScie, TASK_ASSERVISSEMENTSCIE_CORE);
-  //xTaskCreatePinnedToCore(vTaskIOFlash, "IOFlash", TASK_STACK_SIZE, NULL, TASK_IOFLASH_PRIORITY, &xTaskIOFlash, TASK_IOFLASH_CORE);
+  xTaskCreatePinnedToCore(vTaskIOFlash, "IOFlash", TASK_STACK_SIZE, NULL, TASK_IOFLASH_PRIORITY, &xTaskIOFlash, TASK_IOFLASH_CORE);
 }
 
 /// --------- SETUP & LOOP --------- ///
@@ -51,6 +51,15 @@ void vCreateAllTasks() {
  *  @date 2023-04-30 @author Olivier David Laplante - Entrée initiale du code.
  */
 void setup() {
+  // setup serial
+  Serial.begin(115200);
+  
+  // setup SPIFFS
+  if (!SPIFFS.begin(true)) {
+    Serial.println("An Error has occurred while mounting SPIFFS");
+    return;
+  }
+  
   // setup tasks
   vCreateAllTasks();
 
