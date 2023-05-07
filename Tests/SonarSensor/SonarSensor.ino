@@ -1,92 +1,101 @@
-#include <Arduino.h>
+#include <Filters.h>
 
-#define TRIG A1
-#define ECHO A2
-#define BUFFER_SIZE 5
-#define MAX_SPEED_CHANGE 0.100 // m/ms, assuming a maximum speed change of 15 m/s
-#define MIN_SPEED_CHANGE 0.001 // m/ms, filter out noise when the object is not moving
+// SHARP GP2D2F Infrared distance sensor pin
+#define irSensorPin = A0;
 
-double averageSpeed = 0;
-int averageCount = 0;
+// Filter parameters
+#define filterCutoffFreq = 5.0;
 
-long duration;
-int distance, prevDistance;
-unsigned long prevTime, startTime;
-int distanceBuffer[BUFFER_SIZE];
-int bufferIndex = 0;
+// Distance limits
+#define lowerLimit 0.001;
+#define upperLimit 300.0;
+
+#define avgTimeInterval = 30000;
+
+// Timer
+unsigned long prevTime = 0;
+unsigned long currTime = 0;
+float deltaTime = 0;
+
+// Distance
+float prevDistance = 0;
+float currDistance = 0;
+
+// Speed
+float speed = 0;
+
+// Filter object
+Filter::LPF<float> lowpassFilter(filterCutoffFreq);
+
+// Average speed calculation
+unsigned long lastAvgTime = 0;
+float speedSum = 0;
+int speedCount = 0;
 
 void setup() {
-  pinMode(TRIG, OUTPUT);
-  pinMode(ECHO, INPUT);
   Serial.begin(9600);
-  startTime = prevTime = millis();
-  memset(distanceBuffer, 0, BUFFER_SIZE * sizeof(int));
-}
-
-int readDistance() {
-  digitalWrite(TRIG, LOW);
-  delayMicroseconds(2);
-  digitalWrite(TRIG, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(TRIG, LOW);
-
-  duration = pulseIn(ECHO, HIGH);
-  return duration * 0.034 / 2;
-}
-
-int calculateAverageDistance() {
-  int sum = 0;
-  for (int i = 0; i < BUFFER_SIZE; i++) {
-    sum += distanceBuffer[i];
-  }
-  return sum / BUFFER_SIZE;
-}
-
-void updateBuffer(int value) {
-  distanceBuffer[bufferIndex % BUFFER_SIZE] = value;
-  bufferIndex++;
-}
-
-bool isValidDistance(int newDistance, int prevDistance, unsigned long elapsedTime) {
-  float change = abs(newDistance - prevDistance);
-  float maxChange = MAX_SPEED_CHANGE * elapsedTime;
-  float minChange = MIN_SPEED_CHANGE * elapsedTime;
-  return change <= maxChange && change >= minChange;
+  pinMode(irSensorPin, INPUT);
 }
 
 void loop() {
-  averageCount = 0;
-  averageSpeed = 0;
-  while(averageCount <= 10){
-    int newDistance = readDistance();
+  // Read the sensor value
+  int sensorValue = analogRead(irSensorPin);
 
-    unsigned long currentTime = millis();
-    unsigned long elapsedTime = currentTime - prevTime;
+  // Check if the sensor value is not equal to 11 to avoid division by zero
+  if (sensorValue != 11) {
+    float distance = convertToDistance(sensorValue);
 
-    if (isValidDistance(newDistance, prevDistance, elapsedTime)) {
-      updateBuffer(newDistance);
-      distance = calculateAverageDistance();
+    // Calculate deltaTime
+    currTime = millis();
+    deltaTime = (currTime - prevTime) / 1000.0;
 
-      if (bufferIndex > BUFFER_SIZE) {
-        float instantaneousSpeed = abs((float)(newDistance - prevDistance) / elapsedTime)*1000;
+    // Filter the distance value
+    float filteredDistance = lowpassFilter.get(distance, deltaTime);
 
-        averageSpeed += instantaneousSpeed;
-        averageCount += 1;
+    
 
-        Serial.print("Distance: ");
-        Serial.println(distance);
-        Serial.print("Instantaneous Speed: ");
-        Serial.println(instantaneousSpeed);
+    // Check if the distance is within the specified limits
+    if (filteredDistance >= lowerLimit && filteredDistance <= upperLimit) {
+      currDistance = filteredDistance;
+
+      speed = abs(currDistance - prevDistance) / deltaTime;
+
+      // Update the speed sum and count for the average calculation
+      speedSum += speed;
+      speedCount++;
+
+      // Calculate and print the average speed over the time interval
+      if (currTime - lastAvgTime >= avgTimeInterval) {
+        float avgSpeed = speedSum / speedCount;
+        Serial.print("Average Speed: ");
+        Serial.print(avgSpeed);
+        Serial.println(" units/s");
+
+        // Reset values for the next interval
+        lastAvgTime = currTime;
+        speedSum = 0;
+        speedCount = 0;
       }
 
-      prevDistance = newDistance;
-      prevTime = currentTime;
+      // Print the instantaneous speed
+      Serial.print("Instantaneous Speed: ");
+      Serial.print(speed);
+      Serial.print(" - ");
+      Serial.print(currDistance);
+      Serial.println(" units/s");
     }
-
-    delay(500); // Adjust the delay as needed to reduce noise
   }
-  Serial.print("==== ==== ");
-  int average = averageSpeed / averageCount;
-  Serial.print(average);
-  Serial.println(" ==== ====");
+
+  // Update previous values
+  prevDistance = currDistance;
+  prevTime = currTime;
+
+  // Delay for stability
+  delay(50);
+}
+
+float convertToDistance(int sensorValue) {
+  // Conversion formula based on SHARP GP2D2F sensor characteristics
+  float distance = 2076.0 / (sensorValue - 11.0);
+  return distance;
 }

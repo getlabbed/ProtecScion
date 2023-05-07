@@ -19,21 +19,28 @@
 #include "Task_AsservissementScie.h"
 #include "Task_IOFlash.h"
 #include "Task_SoundSensor.h"
+#include "Task_IRSensor.h"
+#include "Task_LCD.h"
 
 // define handles
 TaskHandle_t xTaskAsservissementScie;
 TaskHandle_t xTaskIOFlash;
 TaskHandle_t xTaskSoundSensor;
+TaskHandle_t xTaskIRSensor;
+TaskHandle_t xTaskLCD;
 
 // define semaphores
 SemaphoreHandle_t xSemaphoreSerial;
 SemaphoreHandle_t xSemaphoreSPIFFS;
+SemaphoreHandle_t xSemaphoreLCD;
 
 // define queues
 QueueHandle_t xQueueReadWood;
 QueueHandle_t xQueueWriteWood;
+QueueHandle_t xQueueRequestWood;
 QueueHandle_t xQueueLog;
 QueueHandle_t xQueueSawSpeed;
+QueueHandle_t xQueueLCD;
 
 /// --------- FONCTIONS --------- ///
 
@@ -47,6 +54,8 @@ void vCreateAllTasks() {
   xTaskCreatePinnedToCore(vTaskAsservissementScie, "AsservissementScie", TASK_STACK_SIZE, NULL, TASK_ASSERVISSEMENTSCIE_PRIORITY, &xTaskAsservissementScie, TASK_ASSERVISSEMENTSCIE_CORE);
   xTaskCreatePinnedToCore(vTaskIOFlash, "IOFlash", TASK_STACK_SIZE, NULL, TASK_IOFLASH_PRIORITY, &xTaskIOFlash, TASK_IOFLASH_CORE);
   xTaskCreatePinnedToCore(vTaskSoundSensor, "SoundSensor", TASK_STACK_SIZE, NULL, TASK_SOUNDSENSOR_PRIORITY, &xTaskSoundSensor, TASK_SOUNDSENSOR_CORE);
+  xTaskCreatePinnedToCore(vTaskIRSensor, "IRSensor", TASK_STACK_SIZE, NULL, TASK_IRSENSOR_PRIORITY, &xTaskIRSensor, TASK_IRSENSOR_CORE);
+  xTaskCreatePinnedToCore(vTaskLCD, "LCD", TASK_STACK_SIZE, NULL, TASK_LCD_PRIORITY, &xTaskLCD, TASK_LCD_CORE);
 }
 
 /** 
@@ -58,6 +67,11 @@ void vCreateAllTasks() {
 void vSetupSemaphores() {
   xSemaphoreSerial = xSemaphoreCreateBinary();
   xSemaphoreSPIFFS = xSemaphoreCreateBinary();
+  xSemaphoreLCD = xSemaphoreCreateBinary();
+
+  xSemaphoreGive(xSemaphoreSerial);
+  xSemaphoreGive(xSemaphoreSPIFFS);
+  xSemaphoreGive(xSemaphoreLCD);
 }
 
 /** 
@@ -69,8 +83,10 @@ void vSetupSemaphores() {
 void vSetupQueues() {
   xQueueReadWood = xQueueCreate(1, sizeof(Wood_t));
   xQueueWriteWood = xQueueCreate(1, sizeof(Wood_t));
-  xQueueLog = xQueueCreate(10, sizeof(Log_t));
+  xQueueLog = xQueueCreate(100, sizeof(Log_t));
   xQueueSawSpeed = xQueueCreate(1, sizeof(unsigned int));
+  xQueueRequestWood = xQueueCreate(1, sizeof(unsigned int));
+  xQueueLCD = xQueueCreate(10, sizeof(LCDCommand_t));
 }
 
 /// --------- SETUP & LOOP --------- ///

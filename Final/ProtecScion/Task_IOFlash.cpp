@@ -6,18 +6,19 @@
 
 void vTaskIOFlash(void *pvParameters)
 {
-	// make the task read from the queue every 100ms to write to the file
 	Wood_t wood;
 	Log_t message;
+	unsigned int uiRequestWoodID;
+
+	writeEmptyFile();
 
 	while (1)
 	{
-		// when you receive a notification read the wood from the id from the notification value and write it to the queue
-		if (ulTaskNotifyTake(pdTRUE, 0) > 0)
+		// read from the queue
+		if (xQueueReceive(xQueueRequestWood, &uiRequestWoodID, 0) == pdTRUE)
 		{
-			unsigned int id = ulTaskNotifyValueClear(pdFALSE); // TODO: check if this is the right way to do it
-			readWood(wood, (int)pvParameters);
-			xQueueSend(xQueueWriteWood, &wood, 0);
+			readWood(wood, uiRequestWoodID);
+			xQueueSend(xQueueReadWood, &wood, 0);
 		}
 
 		if (xQueueReceive(xQueueWriteWood, &wood, 0) == pdTRUE)
@@ -27,42 +28,69 @@ void vTaskIOFlash(void *pvParameters)
 		
 		if (xQueueReceive(xQueueLog, &message, 0) == pdTRUE)
 		{
+			if (message.level >= DEBUG) {
+				// Send to LCD
+				continue;
+			}
+
+			if (message.level == DUMP) {
+				dumpLog();
+				continue;
+			}
 			logMessage(message);
 		}
+
 		vTaskDelay(100 / portTICK_PERIOD_MS);
 	}
 }
 
 void writeEmptyFile()
 {
-	File file = SPIFFS.open("/wood.json", "rw");
+	if (xSemaphoreTake(xSemaphoreSPIFFS, portMAX_DELAY) == pdFAIL) 
+	{
+		logMessage(Log_t{ERROR, "WRITE_FILE: Could not take SPIFFS semaphore"});
+		return;
+	}
+
+	File file = SPIFFS.open("/wood.json", "w");
 	if (!file)
 	{
-		Serial.println("Failed to create file");
+		xSemaphoreGive(xSemaphoreSPIFFS);
+		logMessage(Log_t{ERROR, "WRITE_FILE: Failed to create file"});
 		return;
 	}
 
 	// if the file already contains data, return
 	if (file.size() > 0)
 	{
-		Serial.println("File already contains data");
 		file.close();
+		xSemaphoreGive(xSemaphoreSPIFFS);
+		logMessage(Log_t{INFO, "WRITE_FILE: File already contains data"});
 		return;
 	}
 
 	if (file.print("{}"))
 	{
-		Serial.println("File written");
+		file.close();
+		xSemaphoreGive(xSemaphoreSPIFFS);
+		logMessage(Log_t{INFO, "WRITE_FILE: File written"});
 	}
 	else
 	{
-		Serial.println("Write failed");
+		file.close();
+		xSemaphoreGive(xSemaphoreSPIFFS);
+		logMessage(Log_t{ERROR, "WRITE_FILE: Write failed"});
 	}
-	file.close();
 }
 
 void readWood(Wood_t &wood, int id)
 {
+	if (xSemaphoreTake(xSemaphoreSPIFFS, portMAX_DELAY) == pdFAIL) 
+	{
+		logMessage(Log_t{WARNING, "READ_WOOD: Could not take SPIFFS semaphore"});
+		return;
+	}
+
 	File file = SPIFFS.open("/wood.json", "r");
 	// read the file in a variable
 	String fileData;
@@ -71,6 +99,7 @@ void readWood(Wood_t &wood, int id)
 		fileData += char(file.read());
 	}
 	file.close();
+	xSemaphoreGive(xSemaphoreSPIFFS);
 
 	if (fileData.length() > 0) // Si le fichier n'est pas vide
 	{
@@ -79,15 +108,15 @@ void readWood(Wood_t &wood, int id)
 
 		if (error)
 		{
-			Serial.print("deserializeJson() failed: ");
-			Serial.println(error.c_str());
+			String error = "READ_WOOD: deserializeJson() failed:\n" + String(error.c_str());
+			logMessage(Log_t{ERROR, error});
 			return;
 		}
 
 		// if the object is not found, return
 		if (doc.containsKey(String(id)) == false)
 		{
-			Serial.println("Object not found");
+			logMessage(Log_t{WARNING, "READ_WOOD: Object not found"});
 			return;
 		}
 
@@ -99,12 +128,17 @@ void readWood(Wood_t &wood, int id)
 	}
 	else
 	{
-		Serial.println("Error reading JSON file data");
+		logMessage(Log_t{ERROR, "READ_WOOD: Error reading JSON file data"});
 	}
 }
 
 void writeWood(int id, int sawSpeed, int feedRate)
 {
+	if (xSemaphoreTake(xSemaphoreSPIFFS, portMAX_DELAY) == pdFAIL) 
+	{
+		logMessage(Log_t{WARNING, "WRITE_WOOD: Could not take SPIFFS semaphore"});
+		return;
+	}
 	// Lire les données du fichier JSON
 	File file = SPIFFS.open("/wood.json", "r");
 	// read the file in a variable
@@ -114,6 +148,7 @@ void writeWood(int id, int sawSpeed, int feedRate)
 		fileData += char(file.read());
 	}
 	file.close();
+	xSemaphoreGive(xSemaphoreSPIFFS);
 
 	if (fileData.length() > 0)
 	{
@@ -123,8 +158,8 @@ void writeWood(int id, int sawSpeed, int feedRate)
 
 		if (error)
 		{
-			Serial.print("deserializeJson() failed: ");
-			Serial.println(error.c_str());
+			String error = "WRITE_WOOD: deserializeJson() failed:\n" + String(error.c_str());
+			logMessage(Log_t{ERROR, error});
 			return;
 		}
 
@@ -137,68 +172,78 @@ void writeWood(int id, int sawSpeed, int feedRate)
 		String modifiedData;
 		serializeJson(doc, modifiedData);
 
+		if (xSemaphoreTake(xSemaphoreSPIFFS, portMAX_DELAY) == pdFAIL) 
+		{
+			logMessage(Log_t{WARNING, "WRITE_WOOD: Could not take SPIFFS semaphore"});
+			return;
+		}
+
 		File file = SPIFFS.open("/wood.json", "w");
 		if (!file)
 		{
-			Serial.println("Failed to open file for writing");
+			xSemaphoreGive(xSemaphoreSPIFFS);
+			logMessage(Log_t{ERROR, "WRITE_WOOD: Failed to open file for writing"});
 			return;
 		}
 		if (file.print(modifiedData))
 		{
-			Serial.println("File written");
+			file.close();
+			xSemaphoreGive(xSemaphoreSPIFFS);
+			logMessage(Log_t{INFO, "WRITE_WOOD: File written"});
 		}
 		else
 		{
-			Serial.println("Write failed");
+			file.close();
+			xSemaphoreGive(xSemaphoreSPIFFS);
+			logMessage(Log_t{ERROR, "WRITE_WOOD: Write failed"});
 		}
-		file.close();
 	}
 	else
 	{
-		Serial.println("Error reading JSON file data");
+		logMessage(Log_t{ERROR, "WRITE_WOOD: Error reading JSON file data"});
 	}
 }
 
-void logMessage(Log_t logMessage)
+void logMessage(Log_t logMsg)
 {
+	if (xSemaphoreTake(xSemaphoreSPIFFS, portMAX_DELAY) == pdFAIL) { return; }
 	File file = SPIFFS.open("/log.txt", "a");
 	if (!file)
 	{
-		Serial.println("Failed to open file for writing");
+		xSemaphoreGive(xSemaphoreSPIFFS);
 		return;
 	}
 
 	// check if the file is bigger than 100kB
 	if (file.size() > 100000)
 	{
-		Serial.println("File is bigger than 100kB, deleting");
 		file.close();
 		SPIFFS.remove("/log.txt");
 		file = SPIFFS.open("/log.txt", "a");
+		if (!file)
+		{
+			xSemaphoreGive(xSemaphoreSPIFFS);
+			return;
+		}
 	}
 
 	// make a string with the uptime in hh:mm:ss:msmsms format
 	String uptime = String(millis() / 3600000) + ":" + String((millis() / 60000) % 60) + ":" + String((millis() / 1000) % 60) + ":" + String(millis() % 1000);
 	// format the message like a linux kernel log [uptime] logLevel: message
-	String message = "[" + uptime + "] " + logLevelString[logMessage.level] + ": " + logMessage.message;
-
-	if (file.println(message))
-	{
-		Serial.println("File written");
-	}
-	else
-	{
-		Serial.println("Write failed");
-	}
-	file.close();
+	String message = "[" + uptime + "] " + logLevelString[logMsg.level] + ": " + logMsg.message;
+	file.println(message);
+		file.close();
+		xSemaphoreGive(xSemaphoreSPIFFS);
 }
 
 void dumpLog()
 {
+	if (xSemaphoreTake(xSemaphoreSPIFFS, portMAX_DELAY) == pdFAIL) { return; }
+
 	File file = SPIFFS.open("/log.txt", "r");
 	if (!file)
 	{
-		Serial.println("Failed to open file for reading");
+		xSemaphoreGive(xSemaphoreSPIFFS);
 		return;
 	}
 
@@ -211,4 +256,5 @@ void dumpLog()
 	
 	// delete the file
 	SPIFFS.remove("/log.txt");
+	xSemaphoreGive(xSemaphoreSPIFFS);
 }
