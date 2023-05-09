@@ -30,7 +30,6 @@ void vTaskIOFlash(void *pvParameters)
 		{
 			if (message.level >= DEBUG) {
 				// Send to LCD
-				continue;
 			}
 
 			if (message.level == DUMP) {

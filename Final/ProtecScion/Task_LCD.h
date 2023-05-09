@@ -1,6 +1,10 @@
 
 #include "global.h"
 
+#define PIN_DATA 15
+#define PIN_CLOCK 32
+#define PIN_LATCH 14
+
 // Déclarations des tâches
 void vTaskLCD(void *pvParameters);
 
@@ -11,8 +15,5 @@ void resetLine(void *pvParameters);
 // lcd 20x4 buffer struct with String
 typedef struct
 {
-  String line1;
-  String line2;
-  String line3;
-  String line4;
+  String line[4];
 } LCDBuffer_t;

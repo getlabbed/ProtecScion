@@ -25,6 +25,20 @@ void vTaskIRSensor(void *pvParameters)
 {
 	pinMode(PIN_IR_SENSOR, INPUT);
 
+	// wait 2 sec then send a message per line to the lcd queue
+	vTaskDelay(2000 / portTICK_PERIOD_MS);
+	LCDCommand_t cmdBuffer4 = {"IR: 3333", 3, 0};
+	xQueueSend(xQueueLCD, &cmdBuffer4, 0);
+	LCDCommand_t cmdBuffer1 = {"IR: 0", 0, 0};
+	xQueueSend(xQueueLCD, &cmdBuffer1, 0);
+	LCDCommand_t cmdBuffer2 = {"IR: 11", 1, 0};
+	xQueueSend(xQueueLCD, &cmdBuffer2, 0);
+	LCDCommand_t cmdBuffer3 = {"IR: 222", 2, 0};
+	xQueueSend(xQueueLCD, &cmdBuffer3, 0);
+	LCDCommand_t cmdBuffer5 = {"IR: 44444", 3, 2000};
+	xQueueSend(xQueueLCD, &cmdBuffer5, 0);
+	
+
 	while (true)
 	{
 		// Read the sensor value
