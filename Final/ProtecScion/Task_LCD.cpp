@@ -53,7 +53,7 @@ void vTaskLCD(void *pvParameters)
     // use something like this : u8Line = (u8Line == 1) ? 2 : (u8Line == 2) ? 1 : u8Line; to get the right line
     //line = (cmdBuffer.line == 1) ? 2 : (cmdBuffer.line == 2) ? 1 : cmdBuffer.line;
     line = cmdBuffer.line;
-    if (cmdBuffer.duration == 0 || line != 3)
+    if (cmdBuffer.duration == 0)
     {
       // set the buffer
       buffer.line[line] = cmdBuffer.message;
