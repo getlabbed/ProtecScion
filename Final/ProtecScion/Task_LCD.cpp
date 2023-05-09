@@ -16,20 +16,11 @@ struct lineNumbers
 
 void vTaskLCD(void *pvParameters)
 {
-  struct lineNumbers
-  {
-    unsigned int line;
-  } line1, line2, line3, line4;
-  line1.line = 0;
-  line2.line = 1;
-  line3.line = 2;
-  line4.line = 3;
-
   // init timers
-  xTimerLCDLine[0] = xTimerCreate("TimerLCDLine1", 1000 / portTICK_PERIOD_MS, pdFALSE, &line1, resetLine);
-  xTimerLCDLine[1] = xTimerCreate("TimerLCDLine2", 1000 / portTICK_PERIOD_MS, pdFALSE, &line2, resetLine);
-  xTimerLCDLine[2] = xTimerCreate("TimerLCDLine3", 1000 / portTICK_PERIOD_MS, pdFALSE, &line3, resetLine);
-  xTimerLCDLine[3] = xTimerCreate("TimerLCDLine4", 1000 / portTICK_PERIOD_MS, pdFALSE, &line4, resetLine);
+  xTimerLCDLine[0] = xTimerCreate("TimerLCDLine1", 1000 / portTICK_PERIOD_MS, pdFALSE, NULL, resetLine0);
+  xTimerLCDLine[1] = xTimerCreate("TimerLCDLine2", 1000 / portTICK_PERIOD_MS, pdFALSE, NULL, resetLine1);
+  xTimerLCDLine[2] = xTimerCreate("TimerLCDLine3", 1000 / portTICK_PERIOD_MS, pdFALSE, NULL, resetLine2);
+  xTimerLCDLine[3] = xTimerCreate("TimerLCDLine4", 1000 / portTICK_PERIOD_MS, pdFALSE, NULL, resetLine3);
 
   // Connect via SPI. Data pin is #4, clock pin is #5 and latch pin is #6
   Adafruit_LiquidCrystal tempLCD(PIN_DATA, PIN_CLOCK, PIN_LATCH);
@@ -82,15 +73,51 @@ void vTaskLCD(void *pvParameters)
 void setResetLine(unsigned int line, unsigned int duration)
 {
   // set the right timer to the duration
-  if (xTimerIsTimerActive(xTimerLCDLine[3]) == pdTRUE)
+  if (xTimerIsTimerActive(xTimerLCDLine[line]) == pdTRUE)
   {
-    xTimerStop(xTimerLCDLine[3], 0);
+    xTimerStop(xTimerLCDLine[line], 0);
   }
-  xTimerChangePeriod(xTimerLCDLine[3], duration / portTICK_PERIOD_MS, 0);
-  xTimerStart(xTimerLCDLine[3], 0);
+  xTimerChangePeriod(xTimerLCDLine[line], duration / portTICK_PERIOD_MS, 0);
+  xTimerStart(xTimerLCDLine[line], 0);
 }
 
-void resetLine(void *pvParameters)
+void resetLine0(void *pvParameters)
+{
+  if (xSemaphoreTake(xSemaphoreLCD, portMAX_DELAY) == pdTRUE)
+  {
+    lcd->setCursor(0, 0);
+    lcd->print("                    ");
+    lcd->setCursor(0, 0);
+    lcd->print(buffer.line[0]);
+    xSemaphoreGive(xSemaphoreLCD);
+  }
+}
+
+void resetLine1(void *pvParameters)
+{
+  if (xSemaphoreTake(xSemaphoreLCD, portMAX_DELAY) == pdTRUE)
+  {
+    lcd->setCursor(0, 1);
+    lcd->print("                    ");
+    lcd->setCursor(0, 1);
+    lcd->print(buffer.line[1]);
+    xSemaphoreGive(xSemaphoreLCD);
+  }
+}
+
+void resetLine2(void *pvParameters)
+{
+  if (xSemaphoreTake(xSemaphoreLCD, portMAX_DELAY) == pdTRUE)
+  {
+    lcd->setCursor(0, 2);
+    lcd->print("                    ");
+    lcd->setCursor(0, 2);
+    lcd->print(buffer.line[2]);
+    xSemaphoreGive(xSemaphoreLCD);
+  }
+}
+
+void resetLine3(void *pvParameters)
 {
   if (xSemaphoreTake(xSemaphoreLCD, portMAX_DELAY) == pdTRUE)
   {
@@ -101,4 +128,3 @@ void resetLine(void *pvParameters)
     xSemaphoreGive(xSemaphoreLCD);
   }
 }
-
