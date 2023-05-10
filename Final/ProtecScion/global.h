@@ -35,7 +35,7 @@
 #define TASK_ASSERVISSEMENTSCIE_PRIORITY 1
 #define TASK_ASSERVISSEMENTSCIE_CORE 0 // La tâche d'asservissement occupe à elle seule le coeur 0
 // IOFlash
-#define TASK_IOFLASH_PRIORITY 4
+#define TASK_IOFLASH_PRIORITY 3
 #define TASK_IOFLASH_CORE 1
 // SoundSensor
 #define TASK_SOUNDSENSOR_PRIORITY 1
@@ -44,7 +44,7 @@
 #define TASK_IRSENSOR_PRIORITY 2
 #define TASK_IRSENSOR_CORE 1
 // LCD
-#define TASK_LCD_PRIORITY 3
+#define TASK_LCD_PRIORITY 4
 #define TASK_LCD_CORE 1
 // DHT11
 #define TASK_DHT11_PRIORITY 1
@@ -128,3 +128,10 @@ typedef struct __attribute__((packed))
 } LCDCommand_t;
 
 #endif // GLOBAL_H
+
+
+/// FONCTIONS GLOBALES ///
+
+extern void vSendLCDCommand(String message, unsigned int line, unsigned int duration);
+
+extern void vSendLog(LogLevel_t level, String message);

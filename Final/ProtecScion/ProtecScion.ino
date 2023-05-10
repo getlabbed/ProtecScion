@@ -47,9 +47,32 @@ QueueHandle_t xQueueAmbiantHumidity;
 QueueHandle_t xQueueAmbiantTemperature;
 QueueHandle_t xQueueHeatIndex;
 
-
-
 /// --------- FONCTIONS --------- ///
+
+/** 
+ * @fn vSendLCDCommand
+ * @brief Simplifier l'écriture de la commande d'écriture sur l'écran ACL
+ * 
+ * @author Yanick Labelle @date 09-05-2023
+ */
+void vSendLCDCommand( String message, unsigned int line, unsigned int duration)
+{
+    LCDCommand_t cmdBuffer = {message, line, duration};
+    xQueueSend(xQueueLCD, &cmdBuffer, portMAX_DELAY);
+}
+
+/** 
+ * @fn vSendLCDCommand
+ * @brief Simplifier l'écriture de la commande de log
+ * 
+ * @author Yanick Labelle @date 09-05-2023
+ */
+void vSendLog(LogLevel_t level, String message)
+{
+    Log_t logBuffer = {level, message};
+    xQueueSend(xQueueLog, &logBuffer, portMAX_DELAY);
+}
+
 
 /** 
  * @fn vCreateAllTasks

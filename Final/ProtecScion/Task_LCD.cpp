@@ -37,21 +37,22 @@ void vTaskLCD(void *pvParameters)
 
   // call dumpLog after 1 second
   vTaskDelay(1000 / portTICK_PERIOD_MS);
-  Log_t log = {DUMP, "LCD: Initialisation terminée"};
-  xQueueSend(xQueueLog, &log, 0);
+  vSendLog(DUMP, "LCD: Initialisation terminée");
 
-	while (1)
-	{
+  while (1)
+  {
     vTaskDelay(100 / portTICK_PERIOD_MS);
-		// wait for a command from the queue
-    if (xQueueReceive(xQueueLCD, &cmdBuffer, 0) == pdFALSE) continue;
+    // wait for a command from the queue
+    if (xQueueReceive(xQueueLCD, &cmdBuffer, 0) == pdFALSE)
+      continue;
 
     // take the semaphore to access the LCD
-    while (xSemaphoreTake(xSemaphoreLCD, 0) == pdFALSE) vTaskDelay(10 / portTICK_PERIOD_MS);
+    while (xSemaphoreTake(xSemaphoreLCD, 0) == pdFALSE)
+      vTaskDelay(10 / portTICK_PERIOD_MS);
 
     // if the duration is 0, we don't need to set a timer
     // use something like this : u8Line = (u8Line == 1) ? 2 : (u8Line == 2) ? 1 : u8Line; to get the right line
-    //line = (cmdBuffer.line == 1) ? 2 : (cmdBuffer.line == 2) ? 1 : cmdBuffer.line;
+    // line = (cmdBuffer.line == 1) ? 2 : (cmdBuffer.line == 2) ? 1 : cmdBuffer.line;
     line = cmdBuffer.line;
     if (cmdBuffer.duration == 0)
     {
@@ -67,7 +68,7 @@ void vTaskLCD(void *pvParameters)
     lcd->setCursor(0, line);
     lcd->print(cmdBuffer.message);
     xSemaphoreGive(xSemaphoreLCD);
-	}
+  }
 }
 
 void setResetLine(unsigned int line, unsigned int duration)
@@ -81,50 +82,20 @@ void setResetLine(unsigned int line, unsigned int duration)
   xTimerStart(xTimerLCDLine[line], 0);
 }
 
-void resetLine0(void *pvParameters)
+void resetLine(int line)
 {
   if (xSemaphoreTake(xSemaphoreLCD, portMAX_DELAY) == pdTRUE)
   {
-    lcd->setCursor(0, 0);
+    lcd->setCursor(0, line);
     lcd->print("                    ");
-    lcd->setCursor(0, 0);
-    lcd->print(buffer.line[0]);
+    lcd->setCursor(0, line);
+    lcd->print(buffer.line[line]);
     xSemaphoreGive(xSemaphoreLCD);
   }
 }
 
-void resetLine1(void *pvParameters)
-{
-  if (xSemaphoreTake(xSemaphoreLCD, portMAX_DELAY) == pdTRUE)
-  {
-    lcd->setCursor(0, 1);
-    lcd->print("                    ");
-    lcd->setCursor(0, 1);
-    lcd->print(buffer.line[1]);
-    xSemaphoreGive(xSemaphoreLCD);
-  }
-}
-
-void resetLine2(void *pvParameters)
-{
-  if (xSemaphoreTake(xSemaphoreLCD, portMAX_DELAY) == pdTRUE)
-  {
-    lcd->setCursor(0, 2);
-    lcd->print("                    ");
-    lcd->setCursor(0, 2);
-    lcd->print(buffer.line[2]);
-    xSemaphoreGive(xSemaphoreLCD);
-  }
-}
-
-void resetLine3(void *pvParameters)
-{
-  if (xSemaphoreTake(xSemaphoreLCD, portMAX_DELAY) == pdTRUE)
-  {
-    lcd->setCursor(0, 3);
-    lcd->print("                    ");
-    lcd->setCursor(0, 3);
-    lcd->print(buffer.line[3]);
-    xSemaphoreGive(xSemaphoreLCD);
-  }
-}
+// On ne peux pas passer de paramètre à une fonction appelée par un timer
+void resetLine0(void*) {resetLine(0);}
+void resetLine1(void*) {resetLine(1);}
+void resetLine2(void*) {resetLine(2);}
+void resetLine3(void*) {resetLine(3);}

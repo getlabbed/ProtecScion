@@ -27,16 +27,16 @@ void vTaskIRSensor(void *pvParameters)
 
 	// wait 2 sec then send a message per line to the lcd queue
 	vTaskDelay(2000 / portTICK_PERIOD_MS);
-	LCDCommand_t cmdBuffer4 = {"IR: 3333", 3, 0};
-	xQueueSend(xQueueLCD, &cmdBuffer4, 0);
-	LCDCommand_t cmdBuffer1 = {"IR: 0", 0, 0};
-	xQueueSend(xQueueLCD, &cmdBuffer1, 0);
-	LCDCommand_t cmdBuffer2 = {"IR: 11", 1, 0};
-	xQueueSend(xQueueLCD, &cmdBuffer2, 0);
-	LCDCommand_t cmdBuffer3 = {"IR: 222", 2, 0};
-	xQueueSend(xQueueLCD, &cmdBuffer3, 0);
-	LCDCommand_t cmdBuffer5 = {"IR: 44444", 3, 2000};
-	xQueueSend(xQueueLCD, &cmdBuffer5, 0);
+	vSendLCDCommand("IR: 0", 0, 0);
+	vSendLCDCommand("IR: 11", 1, 0);
+	vSendLCDCommand("IR: 222", 2, 0);
+	vSendLCDCommand("IR: 3333", 3, 0);
+	vSendLCDCommand("IR: 44444", 0, 1000);
+	vSendLCDCommand("IR: 555555", 1, 2000);
+	vSendLCDCommand("IR: 6666666", 2, 3000);
+	vSendLCDCommand("IR: 77777777", 3, 4000);
+	vTaskDelay(3000 / portTICK_PERIOD_MS);
+	vSendLog(WARNING, "IR: Initialisation terminée");
 	
 
 	while (true)
@@ -71,8 +71,7 @@ void vTaskIRSensor(void *pvParameters)
 				if (currTime - lastAvgTime >= AVG_INTERVAL_TIME)
 				{
 					float avgSpeed = speedSum / speedCount;
-					Log_t log = {INFO, "IR: Average Speed: " + String(avgSpeed) + " units/s"};
-					xQueueSend(xQueueLog, &log, portMAX_DELAY);
+					vSendLog(INFO, "IR: Average Speed: " + String(avgSpeed) + " units/s");
 
 					// Reset values for the next interval
 					lastAvgTime = currTime;

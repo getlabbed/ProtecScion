@@ -30,6 +30,10 @@ void vTaskIOFlash(void *pvParameters)
 		{
 			if (message.level >= DEBUG) {
 				// Send to LCD
+				// crop 20 characters
+				String myString = message.message.substring(0, 20);	
+				LCDCommand_t lcdMessage = {myString, 3, 1000};
+				xQueueSend(xQueueLCD, &lcdMessage, 0);
 			}
 
 			if (message.level == DUMP) {
@@ -133,7 +137,7 @@ void readWood(Wood_t &wood, int id)
 
 void writeWood(int id, int sawSpeed, int feedRate)
 {
-	if (xSemaphoreTake(xSemaphoreSPIFFS, portMAX_DELAY) == pdFAIL) 
+	if (xSemaphoreTake(xSemaphoreSPIFFS, portMAX_DELAY) == pdFAIL)
 	{
 		logMessage(Log_t{WARNING, "WRITE_WOOD: Could not take SPIFFS semaphore"});
 		return;
@@ -213,7 +217,7 @@ void logMessage(Log_t logMsg)
 		return;
 	}
 
-	// check if the file is bigger than 100kB
+	// Regarder si le fichier est plus grand que 100kB
 	if (file.size() > 100000)
 	{
 		file.close();

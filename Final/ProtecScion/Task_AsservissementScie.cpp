@@ -29,14 +29,12 @@ void vTaskAsservissementScie(void *pvParameters) {
       if (target == 0 || target > 4096)
       {
         motorState = OFF;
-        Log_t log = {INFO, "ASSERV: Received new target, motor set to OFF"};
-        xQueueSend(xQueueLog, &log, portMAX_DELAY);
+        vSendLog(INFO, "ASSERV: Received new target, motor set to OFF");
       }
       else
       {
         motorState = INIT;
-        Log_t log = {INFO, "ASSERV: Received new target, motor set to INIT"};
-        xQueueSend(xQueueLog, &log, portMAX_DELAY);
+        vSendLog(INFO, "ASSERV: Received new target, motor set to INIT");
       }
     }
 
@@ -50,8 +48,7 @@ void vTaskAsservissementScie(void *pvParameters) {
     {
       myPID.Setpoint(target);
       motorState = STARTING;
-      Log_t log = {INFO, "ASSERV: Motor set to STARTING"};
-      xQueueSend(xQueueLog, &log, portMAX_DELAY);
+      vSendLog(INFO, "ASSERV: Motor set to STARTING");
     }
     else if (motorState == STARTING)
     {
@@ -62,8 +59,7 @@ void vTaskAsservissementScie(void *pvParameters) {
       if (abs(input - target) < ANTI_RECUL_ACTIVATION_THRESHOLD)
       {
         motorState = RUNNING;
-        Log_t log = {INFO, "ASSERV: Motor has reached target, set to RUNNING"};
-        xQueueSend(xQueueLog, &log, portMAX_DELAY);
+        vSendLog(INFO, "ASSERV: Motor has reached target, set to RUNNING");
       }
     }
     else if (motorState == RUNNING)
@@ -73,8 +69,7 @@ void vTaskAsservissementScie(void *pvParameters) {
       {
         // stop the motor
         motorState = OFF;
-        Log_t log = {INFO, "ASSERV: Fast change detected, motor set to OFF"};
-        xQueueSend(xQueueLog, &log, portMAX_DELAY);
+        vSendLog(INFO, "ASSERV: Fast change detected, motor set to OFF");
       }
       else
       {
