@@ -22,6 +22,7 @@
 #include "Task_IRSensor.h"
 #include "Task_LCD.h"
 #include "Task_DHT11.h"
+#include "Task_Menu.h"
 
 // define handles
 TaskHandle_t xTaskAsservissementScie;
@@ -30,6 +31,8 @@ TaskHandle_t xTaskSoundSensor;
 TaskHandle_t xTaskIRSensor;
 TaskHandle_t xTaskLCD;
 TaskHandle_t xTaskDHT11;
+TaskHandle_t xTaskMenu;
+TaskHandle_t xTaskKeypad;
 
 // define semaphores
 SemaphoreHandle_t xSemaphoreSerial;
@@ -46,6 +49,7 @@ QueueHandle_t xQueueLCD;
 QueueHandle_t xQueueAmbiantHumidity;
 QueueHandle_t xQueueAmbiantTemperature;
 QueueHandle_t xQueueHeatIndex;
+QueueHandle_t xQueueKeypad; 
 
 /// --------- FONCTIONS --------- ///
 
@@ -87,6 +91,8 @@ void vCreateAllTasks() {
   xTaskCreatePinnedToCore(vTaskIRSensor, "IRSensor", TASK_STACK_SIZE, NULL, TASK_IRSENSOR_PRIORITY, &xTaskIRSensor, TASK_IRSENSOR_CORE);
   xTaskCreatePinnedToCore(vTaskLCD, "LCD", TASK_STACK_SIZE, NULL, TASK_LCD_PRIORITY, &xTaskLCD, TASK_LCD_CORE);
   xTaskCreatePinnedToCore(vTaskDHT11, "DHT11", TASK_STACK_SIZE, NULL, TASK_DHT11_PRIORITY, &xTaskDHT11, TASK_DHT11_CORE);
+  xTaskCreatePinnedToCore(vTaskMenu, "Menu", TASK_STACK_SIZE, NULL, TASK_MENU_PRIORITY, &xTaskMenu, TASK_MENU_CORE);
+  xTaskCreatePinnedToCore(vTaskKeypad, "Keypad", TASK_STACK_SIZE, NULL, TASK_KEYPAD_PRIORITY, &xTaskKeypad, TASK_KEYPAD_CORE);
 }
 
 /** 
@@ -121,6 +127,7 @@ void vSetupQueues() {
   xQueueAmbiantHumidity = xQueueCreate(1, sizeof(float));
   xQueueAmbiantTemperature = xQueueCreate(1, sizeof(float));
   xQueueHeatIndex = xQueueCreate(1, sizeof(float));
+  xQueueKeypad = xQueueCreate(10, sizeof(char));
 }
 
 /// --------- SETUP & LOOP --------- ///

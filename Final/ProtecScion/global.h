@@ -16,15 +16,15 @@
 *	GPIO 26 A0		:		FBK Moteur
 *	GPIO 25 A1		:		PWM Moteur
 *	GPIO 34 A2		:		IR Distance
-*	GPIO 39 A3		:		Sound				|		GPIO 13				:		""
+*	GPIO 39 A3		:		Sound					|		GPIO 13				:		""
 *	GPIO 36 A4		:		KEYPAD				|		GPIO 12				:		!!!NOCONNECT!!!
 *	GPIO 4  A5		:		KEYPAD				|		GPIO 27				:		""
 *	GPIO 5 SCK		:		KEYPAD				|		GPIO 33				:		DHT11
 *	GPIO 18 MOSI	:		KEYPAD				|		GPIO 15				:		LCD DAT
 *	GPIO 19 MISO	:		KEYPAD				|		GPIO 32				:		LCD CLK
-*	GPIO 16			:		KEYPAD				|		GPIO 14				:		LCD LAT
-*	GPIO 17			:		KEYPAD				|		GPIO 22 SCL			:		Temp
-*	GPIO 21			:		KEYPAD				|		GPIO 23 SDA			:		Temp
+*	GPIO 16				:		KEYPAD				|		GPIO 14				:		LCD LAT
+*	GPIO 17				:		KEYPAD				|		GPIO 22 SCL		:		Temp
+*	GPIO 21				:		LED						|		GPIO 23 SDA		:		Temp
 */
 // ---------------------------- ///
 
@@ -49,6 +49,12 @@
 // DHT11
 #define TASK_DHT11_PRIORITY 1
 #define TASK_DHT11_CORE 1
+// Menu
+#define TASK_MENU_PRIORITY 5
+#define TASK_MENU_CORE 1
+// Keypad
+#define TASK_KEYPAD_PRIORITY 5
+#define TASK_KEYPAD_CORE 1
 
 // Niveaux de log
 #define DEBUG 1 // 0: INFO, 1: WARNING, 2: ERROR, 3: DUMP
@@ -67,6 +73,10 @@ extern TaskHandle_t xTaskIRSensor;
 extern TaskHandle_t xTaskLCD;
 // DHT11
 extern TaskHandle_t xTaskDHT11;
+// Menu
+extern TaskHandle_t xTaskMenu;
+// Keypad
+extern TaskHandle_t xTaskKeypad;
 
 /// --------- SEMAPHORES --------- ///
 // Serial
@@ -91,7 +101,8 @@ extern QueueHandle_t xQueueLCD;
 extern QueueHandle_t xQueueAmbiantHumidity;
 extern QueueHandle_t xQueueAmbiantTemperature;
 extern QueueHandle_t xQueueHeatIndex;
-
+// Boutons du keypad
+extern QueueHandle_t xQueueKeypad;
 
 /// --------- TYPES --------- ///
 // Structure de données pour le bois
