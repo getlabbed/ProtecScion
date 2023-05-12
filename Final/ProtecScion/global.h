@@ -103,6 +103,8 @@ extern QueueHandle_t xQueueAmbiantTemperature;
 extern QueueHandle_t xQueueHeatIndex;
 // Boutons du keypad
 extern QueueHandle_t xQueueKeypad;
+// IR Distance
+extern QueueHandle_t xQueueIRDistance;
 
 /// --------- TYPES --------- ///
 // Structure de données pour le bois
@@ -111,7 +113,7 @@ typedef struct __attribute__((packed))
 	String name;	// nom du bois
 	int code;			// code du bois
 	int sawSpeed; // vitesse de la lame
-	int feedRate; // vitesse d'avancement
+	float feedRate; // vitesse d'avancement
 } Wood_t;
 
 // Enumération pour les niveaux de log
@@ -138,11 +140,10 @@ typedef struct __attribute__((packed))
 	unsigned int duration; // en ms, 0 pour infini
 } LCDCommand_t;
 
-#endif // GLOBAL_H
-
-
 /// FONCTIONS GLOBALES ///
 
 extern void vSendLCDCommand(String message, unsigned int line, unsigned int duration);
 
 extern void vSendLog(LogLevel_t level, String message);
+
+#endif // GLOBAL_H

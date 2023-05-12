@@ -23,6 +23,7 @@
 #include "Task_LCD.h"
 #include "Task_DHT11.h"
 #include "Task_Menu.h"
+#include "Task_Keypad.h"
 
 // define handles
 TaskHandle_t xTaskAsservissementScie;
@@ -50,6 +51,7 @@ QueueHandle_t xQueueAmbiantHumidity;
 QueueHandle_t xQueueAmbiantTemperature;
 QueueHandle_t xQueueHeatIndex;
 QueueHandle_t xQueueKeypad; 
+QueueHandle_t xQueueIRDistance;
 
 /// --------- FONCTIONS --------- ///
 
@@ -128,6 +130,7 @@ void vSetupQueues() {
   xQueueAmbiantTemperature = xQueueCreate(1, sizeof(float));
   xQueueHeatIndex = xQueueCreate(1, sizeof(float));
   xQueueKeypad = xQueueCreate(10, sizeof(char));
+  xQueueIRDistance = xQueueCreate(1, sizeof(unsigned int));
 }
 
 /// --------- SETUP & LOOP --------- ///

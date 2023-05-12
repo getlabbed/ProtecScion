@@ -4,7 +4,7 @@
 
 /// --------- Wood IO --------- ///
 
-const String woodType[] = {"Sapin", "Pin", "Noyer", "Bouleau", "Chêne", "Érable", "Frêne", "Merisier", "Mélèze", "Épinette"};
+const String woodType[] = {"Sapin", "Pin", "Noyer", "Bouleau", "Chêne", "Érable", "Frêne", "Merisier", "Mélèze"};
 
 void vTaskIOFlash(void *pvParameters);
 void writeEmptyFile();
