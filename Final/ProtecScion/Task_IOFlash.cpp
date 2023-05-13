@@ -28,13 +28,10 @@ void vTaskIOFlash(void *pvParameters)
 		
 		if (xQueueReceive(xQueueLog, &message, 0) == pdTRUE)
 		{
-			if (message.level >= DEBUG) {
-				// Send to LCD
-				// crop 20 characters
-				String myString = message.message.substring(0, 20);	
-				LCDCommand_t lcdMessage = {myString, 3, 1000};
-				xQueueSend(xQueueLCD, &lcdMessage, 0);
-			}
+			// if (message.level >= DEBUG && message.level <= ERROR) {
+			// 	String myString = message.message.substring(0, 15);	
+			// 	vSendLCDCommand(myString, 0, 3000);
+			// }
 
 			if (message.level == DUMP) {
 				dumpLog();

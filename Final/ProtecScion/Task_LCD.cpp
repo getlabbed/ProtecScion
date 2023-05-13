@@ -33,39 +33,33 @@ void vTaskLCD(void *pvParameters)
 
   LCDCommand_t cmdBuffer;
 
-  unsigned int line;
-
-  // call dumpLog after 1 second
-  vTaskDelay(1000 / portTICK_PERIOD_MS);
-  vSendLog(DUMP, "LCD: Initialisation terminée");
-
   while (1)
   {
-    vTaskDelay(100 / portTICK_PERIOD_MS);
     // wait for a command from the queue
-    if (xQueueReceive(xQueueLCD, &cmdBuffer, 0) == pdFALSE)
-      continue;
+    if (!xQueueReceive(xQueueLCD, &cmdBuffer, portMAX_DELAY)) continue;
 
     // take the semaphore to access the LCD
-    while (xSemaphoreTake(xSemaphoreLCD, 0) == pdFALSE)
-      vTaskDelay(10 / portTICK_PERIOD_MS);
+    while (!xSemaphoreTake(xSemaphoreLCD, portMAX_DELAY)) vTaskDelay(10 / portTICK_PERIOD_MS);
 
     // if the duration is 0, we don't need to set a timer
     // use something like this : u8Line = (u8Line == 1) ? 2 : (u8Line == 2) ? 1 : u8Line; to get the right line
     // line = (cmdBuffer.line == 1) ? 2 : (cmdBuffer.line == 2) ? 1 : cmdBuffer.line;
-    line = cmdBuffer.line;
-    if (cmdBuffer.duration == 0)
-    {
-      // set the buffer
-      buffer.line[line] = cmdBuffer.message;
-    }
-    else
-    {
-      // set the timer
-      setResetLine(line, cmdBuffer.duration);
-    }
+    cmdBuffer.message = cmdBuffer.message.substring(0, 19);
+    // if (cmdBuffer.duration == 0)
+    // {
+    //   // set the buffer
+    //   buffer.line[cmdBuffer.line] = cmdBuffer.message;
+    // }
+    // else
+    // {
+    //   // set the timer
+    //   setResetLine(cmdBuffer.line, cmdBuffer.duration);
+    // }
+    // Serial.println("vSendLCDCommand");
+    // Serial.println(cmdBuffer.message);
+    // Serial.println(cmdBuffer.line);
     // set the line on the lcd
-    lcd->setCursor(0, line);
+    lcd->setCursor(0, cmdBuffer.line);
     lcd->print(cmdBuffer.message);
     xSemaphoreGive(xSemaphoreLCD);
   }

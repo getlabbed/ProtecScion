@@ -1,105 +1,169 @@
-// THX CHAT GPT FOR CLEAN CODE
-
 #include "Task_Menu.h"
 #include "Task_IOFlash.h"
+#include "yasm.h"
+
+unsigned int uiMode = 0;
+String sChoice;
+char cChoice;
+Wood_t wood;
+YASM xStateMachine;
 
 void vTaskMenu(void *pvParameters)
 {
-	unsigned int uiMode = 0;
-	String sChoice;
-	char cChoice;
-	Wood_t wood;
-	MenuState_t state = MODE_SEL;
-	const unsigned int zero = 0;
-
+	xStateMachine.next(xStateModeSel);
+	vTaskDelay(pdMS_TO_TICKS(1000));
+	vUpdateScreen();
 	while (true)
 	{
 		xQueueReceive(xQueueKeypad, &cChoice, portMAX_DELAY); // Attendre une touche
+		xStateMachine.run();
+		vUpdateScreen();
+		vTaskDelay(100 / portTICK_PERIOD_MS);
+	}
+}
 
-		if (state == ACTIVE) // Si une touche est appuyée, ARRETER la scie et revenir en mode selection
+void xStateModeSel()
+{
+	Serial.println("xStateModeSel");
+	if (cChoice >= '1' && cChoice <= '4') // valid mode
+	{
+		uiMode = cChoice - '0';
+		// ALWAYS GO TO WOOD SELECT
+		xStateMachine.next(xStateWoodSel);
+		sChoice = "";
+	}
+}
+
+void xStateWoodSel()
+{
+	Serial.println("xStateWoodSel");
+	if (cChoice == '#')
+	{
+		if (sChoice.length() > 0)
 		{
-			xQueueSend(xQueueSawSpeed, &zero, portMAX_DELAY);
-			state = MODE_SEL;
+			sChoice.remove(sChoice.length() - 1);
 		}
-		else if (state == MODE_SEL) // Keys 1-4 will select mode, any other key will be ignored
-		{
-			uiMode = cChoice - '0';
-			if (uiMode >= 1 && uiMode <= 4) // valid mode
-			{
-				// ALWAYS GO TO WOOD SELECT
-				state = WOOD_SEL;
-				sChoice = "";
-			}
-		}
-
-		else if (cChoice == '*')
-		{
-
-			if (state == WOOD_SEL && uiMode <= 2)
-			{
-				if (uiMode == 2) xQueueSend(xQueueIRDistance, &(wood.code), portMAX_DELAY);
-				xQueueSend(xQueueRequestWood, &(wood.code), portMAX_DELAY);
-				xQueueReceive(xQueueReadWood, &wood, portMAX_DELAY);
-				xQueueSend(xQueueSawSpeed, &(wood.sawSpeed), portMAX_DELAY);
-			}
-
-			else if (state == EDIT_SAW_SPEED)
-			{
-				// get speed from wood
-				// Send speed to saw
-				wood.sawSpeed = sChoice.toInt();
-			}
-
-			else if (state == EDIT_FEED_RATE)
-			{
-				// get speed from wood
-				// Send speed to saw
-				wood.feedRate = sChoice.toInt();
-				xQueueSend(xQueueWriteWood, &wood, portMAX_DELAY);
-			}
-
-			state = (state == WOOD_SEL && uiMode <= 2) 	? ACTIVE 				: 
-							(state == WOOD_SEL)		 							? EDIT_SAW_SPEED 	: 
-							(state == EDIT_SAW_SPEED)	 					? EDIT_FEED_RATE 	: 
-																										MODE_SEL;
-		}
-
 		else
 		{
-			sChoice.concat(cChoice);
-			vSendLCDCommand(sChoice, 2, 0);
-			continue;
+			xStateMachine.next(xStateWoodSel);
 		}
-
-		if (state == MODE_SEL)
+	}
+	else if (cChoice == '*')
+	{
+		if (uiMode <= 2)
 		{
-			vSendLCDCommand("1. Mode Operation   ", 0, 0);
-			vSendLCDCommand("2. Mode Apprendre   ", 1, 0);
-			vSendLCDCommand("3. Mode Manuel      ", 2, 0);
-			vSendLCDCommand("4. Mode Modifier    ", 3, 0);
+			if (uiMode == 2) xQueueSend(xQueueIRDistance, &(wood.code), portMAX_DELAY);
+			xQueueSend(xQueueRequestWood, &(wood.code), portMAX_DELAY);
+			sChoice = "";
+			xStateMachine.next(xStateActive);
 		}
-
-		else if (state == WOOD_SEL)
+		else
 		{
-			vSendLCDCommand("     Input WOOD     ", 0, 0);
-			vSendLCDCommand("WOOD ID + WOOD NUM: ", 1, 0);
-			vSendLCDCommand("                    ", 2, 0);
-			vSendLCDCommand("Press * to confirm  ", 3, 0);
+			sChoice = "";
+			xStateMachine.next(xStateEditSawSpeed);
 		}
+	}
+	else if (cChoice >= '0' && cChoice <= '9')
+	{
+		sChoice.concat(cChoice);
+	}
+}
 
-		else if (state == EDIT_SAW_SPEED || state == EDIT_FEED_RATE)
+void xStateEditSawSpeed()
+{
+	Serial.println("xStateEditSawSpeed");
+	if (cChoice == '#')
+	{
+		if (sChoice.length() > 0)
 		{
-			vSendLCDCommand((uiMode == 3) ? "==  MODE MANUEL   ==" : "== MODE MODIFIER  ==", 0, 0);
-			vSendLCDCommand((state == EDIT_SAW_SPEED) ? "Input SAW SPEED     " : "Input FEED RATE     ", 1, 0);
-			vSendLCDCommand(sChoice, 2, 0);
-			vSendLCDCommand("Press * to confirm  ", 3, 0);
+			sChoice.remove(sChoice.length() - 1);
 		}
-
-		else if (state == ACTIVE)
+		else
 		{
-			vSendLCDCommand((uiMode == 1) ? "==   OPERATION    ==" : "==   APPRENDRE    ==", 0, 0);
+			xStateMachine.next(xStateWoodSel);
 		}
+	}
+	else if (cChoice == '*' && sChoice.length() > 1)
+	{
+		wood.sawSpeed = sChoice.toInt();
+		sChoice = "";
+		xStateMachine.next(xStateEditFeedRate);
+	}
+	else if (cChoice >= '0' && cChoice <= '9' && sChoice.length() < 3)
+	{
+		sChoice.concat(cChoice);
+	}
+}
 
-		vTaskDelay(100 / portTICK_PERIOD_MS);
+void xStateEditFeedRate()
+{
+	Serial.println("xStateEditFeedRate");
+	if (cChoice == '#')
+	{
+		if (sChoice.length() > 0)
+		{
+			sChoice.remove(sChoice.length() - 1);
+		}
+		else
+		{
+			xStateMachine.next(xStateWoodSel);
+		}
+	}
+	else if (cChoice == '*' && sChoice.length() > 1)
+	{
+		wood.feedRate = sChoice.toInt();
+		sChoice = "";
+		xStateMachine.next(xStateModeSel);
+	}
+	else if (cChoice >= '0' && cChoice <= '9' && sChoice.length() < 3)
+	{
+		sChoice.concat(cChoice);
+	}
+}
+
+void xStateActive()
+{
+	Serial.println("xStateActive");
+	unsigned int zero = 0;
+	xQueueSend(xQueueSawSpeed, &(zero), portMAX_DELAY);
+	xStateMachine.next(xStateModeSel);
+}
+
+void vUpdateScreen()
+{
+	if (xStateMachine.isInState(xStateModeSel))
+	{
+		vSendLCDCommand("1. Mode Operation  ", 0, 0);
+		vSendLCDCommand("2. Mode Apprendre  ", 1, 0);
+		vSendLCDCommand("3. Mode Manuel     ", 2, 0);
+		vSendLCDCommand("4. Mode Modifier   ", 3, 0);
+	}
+	else if (xStateMachine.isInState(xStateWoodSel))
+	{
+		vSendLCDCommand("==   Input WOOD   ==", 0, 0);
+		vSendLCDCommand("WOOD ID + WOOD NUM:", 1, 0);
+		vSendLCDCommand((sChoice == "") ? "                    " : sChoice, 2, 0);
+		vSendLCDCommand("Press * to confirm ", 3, 0);
+	}
+	else if (xStateMachine.isInState(xStateEditSawSpeed))
+	{
+		vSendLCDCommand((uiMode == 3) ? "==  MODE MANUEL   ==" : "== MODE MODIFIER  ==", 0, 0);
+		vSendLCDCommand("Input SAW SPEED    ", 1, 0);
+		vSendLCDCommand((sChoice == "") ? "                    " : sChoice, 2, 0);
+		vSendLCDCommand("Press * to confirm ", 3, 0);
+	}
+	else if (xStateMachine.isInState(xStateEditFeedRate))
+	{
+		vSendLCDCommand((uiMode == 3) ? "==  MODE MANUEL  ==" : "== MODE MODIFIER ==", 0, 0);
+		vSendLCDCommand("Input FEED RATE    ", 1, 0);
+		vSendLCDCommand(sChoice, 2, 0);
+		vSendLCDCommand("Press * to confirm ", 3, 0);
+	}
+	else if (xStateMachine.isInState(xStateActive))
+	{
+		vSendLCDCommand((uiMode == 1) ? "==   OPERATION   ==" : "==   APPRENDRE   ==", 0, 0);
+		vSendLCDCommand("                   ", 1, 0);
+		vSendLCDCommand("                   ", 2, 0);
+		vSendLCDCommand("                   ", 3, 0);
 	}
 }

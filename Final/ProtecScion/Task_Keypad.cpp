@@ -1,25 +1,18 @@
 #include "Task_Keypad.h"
 #include <Keypad.h>
 
-void vTaskKeypad(void *pvParameters){
-    const byte ROWS = 4;
-    const byte COLS = 3;
-    char keys[ROWS][COLS] = {
-      {'1','2','3'},
-      {'4','5','6'},
-      {'7','8','9'},
-      {'#','0','*'}
-    };
-    byte rowPins[ROWS] = {36, 4, 5, 18};
-    byte colPins[COLS] = {19, 16, 17};
-    Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
-    while(1){
-        // Read keypad
-        char key = keypad.getKey();
+byte rowPins[KEYPAD_ROWS] = {PIN_KEYPAD_1, PIN_KEYPAD_2, PIN_KEYPAD_3, PIN_KEYPAD_4};
+byte colPins[KEYPAD_COLS] = {PIN_KEYPAD_5, PIN_KEYPAD_6, PIN_KEYPAD_7};
 
-        if (key != NO_KEY){
-            xQueueSend(xQueueKeypad, &key, portMAX_DELAY);
-        }
-        vTaskDelay(100);
-    }
+void vTaskKeypad(void *pvParameters)
+{
+	char key = NO_KEY;
+	Keypad kp = Keypad(makeKeymap(keys), rowPins, colPins, KEYPAD_ROWS, KEYPAD_COLS);
+
+	while (1)
+	{
+		while((key = kp.getKey()) == NO_KEY) vTaskDelay(pdMS_TO_TICKS(10));												 // Attendre pour une touche
+		vTaskDelay(1);																 // Très important
+		xQueueSend(xQueueKeypad, &key, portMAX_DELAY); // Envoyer la touche dans la file
+	}
 }
