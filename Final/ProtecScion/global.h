@@ -148,7 +148,7 @@ typedef struct //__attribute__((packed))
 } LCDCommand_t;
 
 // Structure de données pour les boutons de la LED
-typedef enum {LED_RED, LED_GREEN, LED_BOTH, LED_BLINK} LedState_t;
+typedef enum {LED_RED, LED_GREEN, LED_BOTH, LED_BLINK, LED_OFF} LedState_t;
 
 /// FONCTIONS GLOBALES ///
 
