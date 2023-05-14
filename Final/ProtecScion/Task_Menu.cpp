@@ -1,39 +1,53 @@
+/**
+ * Nom du fichier :
+ *  @name Task_Menu.cpp
+ * Description :
+ *  @brief Code permettant de gérer le menu de l'application.
+ * restrictions:
+ *  Pour type de carte ESP32 Feather
+ * Historique :
+ *  @date 2023-05-13 @author Olivier David Laplante - Entrée initiale du code.
+ */
+
 #include "Task_Menu.h"
 #include "Task_IOFlash.h"
 #include "yasm.h"
 
-unsigned int uiMode = 0;
-String sChoice;
-char cChoice;
-Wood_t wood;
-YASM xStateMachine;
+unsigned int uiMode = 0; // Mode sélectionné | 0: Opération, 1: Apprendre, 2: Manuel, 3: Modifier
+String sChoice;          // Choix de l'utilisateur
+char cChoice;            // choix de l'utilisateur
+Wood_t wood;             // Bois sélectionné
+YASM xStateMachine;      // Machine à état
 
+// Tache principale
 void vTaskMenu(void *pvParameters)
 {
-	xStateMachine.next(xStateModeSel);
+	xStateMachine.next(xStateModeSel); // Initialiser la machine à état
 	vTaskDelay(pdMS_TO_TICKS(1000));
-	vUpdateScreen();
+	vUpdateScreen();                   // Mettre à jour l'écran
 	while (true)
 	{
 		xQueueReceive(xQueueKeypad, &cChoice, portMAX_DELAY); // Attendre une touche
-		xStateMachine.run();
-		vUpdateScreen();
+		xStateMachine.run();                                  // Exécuter la machine à état
+		vUpdateScreen();                                      // Mettre à jour l'écran
 		vTaskDelay(100 / portTICK_PERIOD_MS);
 	}
 }
 
+// sélection du mode
 void xStateModeSel()
 {
 	Serial.println("xStateModeSel");
-	if (cChoice >= '1' && cChoice <= '4') // valid mode
+	if (cChoice >= '1' && cChoice <= '4') // Si le mode choisit est valide
 	{
-		uiMode = cChoice - '0';
+		uiMode = cChoice - '0';             // Convertir le choix en entier
 		// ALWAYS GO TO WOOD SELECT
-		xStateMachine.next(xStateWoodSel);
-		sChoice = "";
+		xStateMachine.next(xStateWoodSel);  // Aller à la sélection du bois
+		sChoice = "";                       // Réinitialiser le choix
 	}
 }
 
+// sélection du bois
 void xStateWoodSel()
 {
 	Serial.println("xStateWoodSel");
@@ -69,6 +83,7 @@ void xStateWoodSel()
 	}
 }
 
+// Édition de la vitesse de la scie
 void xStateEditSawSpeed()
 {
 	Serial.println("xStateEditSawSpeed");
@@ -95,6 +110,7 @@ void xStateEditSawSpeed()
 	}
 }
 
+// Édition de la vitesse d'avancement
 void xStateEditFeedRate()
 {
 	Serial.println("xStateEditFeedRate");
@@ -121,14 +137,16 @@ void xStateEditFeedRate()
 	}
 }
 
+// Mode actif
 void xStateActive()
 {
 	Serial.println("xStateActive");
 	unsigned int zero = 0;
-	xQueueSend(xQueueSawSpeed, &(zero), portMAX_DELAY);
+	xQueueSend(xQueueSawSpeed, &(zero), portMAX_DELAY); // Arrêter la scie
 	xStateMachine.next(xStateModeSel);
 }
 
+// Fonction qui permet de mettre à jour l'écran
 void vUpdateScreen()
 {
 	if (xStateMachine.isInState(xStateModeSel))

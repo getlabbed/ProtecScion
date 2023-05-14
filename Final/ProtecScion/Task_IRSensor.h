@@ -1,3 +1,14 @@
+/**
+ * Nom du fichier :
+ *  @name Task_IRSensor.h
+ * Description :
+ *  @brief Fichier d'en-tête du fichier Task_IRSensor.cpp.
+ * restrictions:
+ *  Pour type de carte ESP32 Feather
+ * Historique :
+ *  @date 2023-??-?? @author Yanick Labelle - Entrée initiale du code.
+ */
+
 #include "global.h"
 
 // Broche du capteur de distance infrarouge SHARP GP2D2F

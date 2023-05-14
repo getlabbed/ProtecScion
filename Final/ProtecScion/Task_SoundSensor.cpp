@@ -1,3 +1,14 @@
+/**
+ * Nom du fichier :
+ *  @name Task_SoundSensor.cpp
+ * Description :
+ *  @brief Code permettant de gérer le capteur de son.
+ * restrictions:
+ *  Pour type de carte ESP32 Feather
+ * Historique :
+ *  @date 2023-??-?? @author Yanick Labelle - Entrée initiale du code.
+ */
+
 #include "Task_SoundSensor.h"
 
 void vTaskSoundSensor(void *pvParameters)
