@@ -55,11 +55,11 @@ void xStateWoodSel()
 	{
 		if (sChoice.length() > 0)
 		{
-			sChoice.remove(sChoice.length() - 1);
+			sChoice = "";
 		}
 		else
 		{
-			xStateMachine.next(xStateWoodSel);
+			xStateMachine.next(xStateModeSel);
 		}
 	}
 	else if (cChoice == '*')
@@ -77,7 +77,7 @@ void xStateWoodSel()
 			xStateMachine.next(xStateEditSawSpeed);
 		}
 	}
-	else if (cChoice >= '0' && cChoice <= '9')
+	else if (cChoice >= '0' && cChoice <= '9' && sChoice.length() < 3)
 	{
 		sChoice.concat(cChoice);
 	}
@@ -91,15 +91,16 @@ void xStateEditSawSpeed()
 	{
 		if (sChoice.length() > 0)
 		{
-			sChoice.remove(sChoice.length() - 1);
+			sChoice = "";
 		}
 		else
 		{
-			xStateMachine.next(xStateWoodSel);
+			xStateMachine.next(xStateModeSel);
 		}
 	}
 	else if (cChoice == '*' && sChoice.length() > 1)
 	{
+		if (sChoice.toInt() > 100) sChoice = "100";
 		wood.sawSpeed = sChoice.toInt();
 		sChoice = "";
 		xStateMachine.next(xStateEditFeedRate);
@@ -118,15 +119,16 @@ void xStateEditFeedRate()
 	{
 		if (sChoice.length() > 0)
 		{
-			sChoice.remove(sChoice.length() - 1);
+			sChoice = "";
 		}
 		else
 		{
-			xStateMachine.next(xStateWoodSel);
+			xStateMachine.next(xStateModeSel);
 		}
 	}
 	else if (cChoice == '*' && sChoice.length() > 1)
 	{
+		if (sChoice.toInt() > 300) sChoice = "300";
 		wood.feedRate = sChoice.toInt();
 		sChoice = "";
 		xStateMachine.next(xStateModeSel);
@@ -174,7 +176,7 @@ void vUpdateScreen()
 	{
 		vSendLCDCommand((uiMode == 3) ? "==  MODE MANUEL  ==" : "== MODE MODIFIER ==", 0, 0);
 		vSendLCDCommand("Input FEED RATE    ", 1, 0);
-		vSendLCDCommand(sChoice, 2, 0);
+		vSendLCDCommand((sChoice == "") ? "                    " : sChoice, 2, 0);
 		vSendLCDCommand("Press * to confirm ", 3, 0);
 	}
 	else if (xStateMachine.isInState(xStateActive))

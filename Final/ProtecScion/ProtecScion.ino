@@ -84,7 +84,7 @@ void vSendLog(LogLevel_t level, String message)
 }
 
 
-/** 
+/**
  * @fn vCreateAllTasks
  * @brief Création des tâches
  * 
