@@ -23,18 +23,21 @@ void vTaskIOFlash(void *pvParameters)
 
 		if (xQueueReceive(xQueueWriteWood, &wood, 0) == pdTRUE)
 		{
+
 			writeWood(wood.code, wood.sawSpeed, wood.feedRate);
 		}
-		
+
 		if (xQueueReceive(xQueueLog, &message, 0) == pdTRUE)
 		{
 			// if (message.level >= DEBUG && message.level <= ERROR) {
-			// 	String myString = message.message.substring(0, 15);	
+			// 	String myString = message.message.substring(0, 15);
 			// 	vSendLCDCommand(myString, 0, 3000);
 			// }
 
-			if (message.level == DUMP) {
+			if (message.level == DUMP)
+			{
 				dumpLog();
+				vDumpWood();
 				continue;
 			}
 			logMessage(message);
@@ -46,7 +49,7 @@ void vTaskIOFlash(void *pvParameters)
 
 void writeEmptyFile()
 {
-	if (xSemaphoreTake(xSemaphoreSPIFFS, portMAX_DELAY) == pdFAIL) 
+	if (xSemaphoreTake(xSemaphoreSPI, portMAX_DELAY) == pdFAIL)
 	{
 		logMessage(Log_t{ERROR, "WRITE_FILE: Could not take SPIFFS semaphore"});
 		return;
@@ -55,7 +58,8 @@ void writeEmptyFile()
 	File file = SPIFFS.open("/wood.json", "w");
 	if (!file)
 	{
-		xSemaphoreGive(xSemaphoreSPIFFS);
+		xSemaphoreGive(xSemaphoreSPI);
+		vTaskDelay(10 / portTICK_PERIOD_MS);
 		logMessage(Log_t{ERROR, "WRITE_FILE: Failed to create file"});
 		return;
 	}
@@ -64,7 +68,8 @@ void writeEmptyFile()
 	if (file.size() > 0)
 	{
 		file.close();
-		xSemaphoreGive(xSemaphoreSPIFFS);
+		xSemaphoreGive(xSemaphoreSPI);
+		vTaskDelay(10 / portTICK_PERIOD_MS);
 		logMessage(Log_t{INFO, "WRITE_FILE: File already contains data"});
 		return;
 	}
@@ -72,20 +77,22 @@ void writeEmptyFile()
 	if (file.print("{}"))
 	{
 		file.close();
-		xSemaphoreGive(xSemaphoreSPIFFS);
+		xSemaphoreGive(xSemaphoreSPI);
+		vTaskDelay(10 / portTICK_PERIOD_MS);
 		logMessage(Log_t{INFO, "WRITE_FILE: File written"});
 	}
 	else
 	{
 		file.close();
-		xSemaphoreGive(xSemaphoreSPIFFS);
+		xSemaphoreGive(xSemaphoreSPI);
+		vTaskDelay(10 / portTICK_PERIOD_MS);
 		logMessage(Log_t{ERROR, "WRITE_FILE: Write failed"});
 	}
 }
 
 void readWood(Wood_t &wood, int id)
 {
-	if (xSemaphoreTake(xSemaphoreSPIFFS, portMAX_DELAY) == pdFAIL) 
+	if (xSemaphoreTake(xSemaphoreSPI, portMAX_DELAY) == pdFAIL)
 	{
 		logMessage(Log_t{WARNING, "READ_WOOD: Could not take SPIFFS semaphore"});
 		return;
@@ -99,7 +106,8 @@ void readWood(Wood_t &wood, int id)
 		fileData += char(file.read());
 	}
 	file.close();
-	xSemaphoreGive(xSemaphoreSPIFFS);
+	vTaskDelay(10 / portTICK_PERIOD_MS);
+	xSemaphoreGive(xSemaphoreSPI);
 
 	if (fileData.length() > 0) // Si le fichier n'est pas vide
 	{
@@ -121,7 +129,6 @@ void readWood(Wood_t &wood, int id)
 		}
 
 		JsonObject obj = doc[String(id)];
-		wood.name = obj["name"].as<String>();
 		wood.code = obj["code"].as<int>();
 		wood.sawSpeed = obj["sawSpeed"].as<int>();
 		wood.feedRate = obj["feedRate"].as<int>();
@@ -134,7 +141,7 @@ void readWood(Wood_t &wood, int id)
 
 void writeWood(int id, int sawSpeed, int feedRate)
 {
-	if (xSemaphoreTake(xSemaphoreSPIFFS, portMAX_DELAY) == pdFAIL)
+	if (xSemaphoreTake(xSemaphoreSPI, portMAX_DELAY) == pdFAIL)
 	{
 		logMessage(Log_t{WARNING, "WRITE_WOOD: Could not take SPIFFS semaphore"});
 		return;
@@ -148,7 +155,8 @@ void writeWood(int id, int sawSpeed, int feedRate)
 		fileData += char(file.read());
 	}
 	file.close();
-	xSemaphoreGive(xSemaphoreSPIFFS);
+	vTaskDelay(10 / portTICK_PERIOD_MS);
+	xSemaphoreGive(xSemaphoreSPI);
 
 	if (fileData.length() > 0)
 	{
@@ -163,7 +171,6 @@ void writeWood(int id, int sawSpeed, int feedRate)
 			return;
 		}
 
-		doc[String(id)]["name"] = woodType[id];
 		doc[String(id)]["code"] = id;
 		doc[String(id)]["sawSpeed"] = sawSpeed;
 		doc[String(id)]["feedRate"] = feedRate;
@@ -172,7 +179,7 @@ void writeWood(int id, int sawSpeed, int feedRate)
 		String modifiedData;
 		serializeJson(doc, modifiedData);
 
-		if (xSemaphoreTake(xSemaphoreSPIFFS, portMAX_DELAY) == pdFAIL) 
+		if (xSemaphoreTake(xSemaphoreSPI, portMAX_DELAY) == pdFAIL)
 		{
 			logMessage(Log_t{WARNING, "WRITE_WOOD: Could not take SPIFFS semaphore"});
 			return;
@@ -181,20 +188,23 @@ void writeWood(int id, int sawSpeed, int feedRate)
 		File file = SPIFFS.open("/wood.json", "w");
 		if (!file)
 		{
-			xSemaphoreGive(xSemaphoreSPIFFS);
+			vTaskDelay(10 / portTICK_PERIOD_MS);
+			xSemaphoreGive(xSemaphoreSPI);
 			logMessage(Log_t{ERROR, "WRITE_WOOD: Failed to open file for writing"});
 			return;
 		}
 		if (file.print(modifiedData))
 		{
 			file.close();
-			xSemaphoreGive(xSemaphoreSPIFFS);
+			vTaskDelay(10 / portTICK_PERIOD_MS);
+			xSemaphoreGive(xSemaphoreSPI);
 			logMessage(Log_t{INFO, "WRITE_WOOD: File written"});
 		}
 		else
 		{
 			file.close();
-			xSemaphoreGive(xSemaphoreSPIFFS);
+			vTaskDelay(10 / portTICK_PERIOD_MS);
+			xSemaphoreGive(xSemaphoreSPI);
 			logMessage(Log_t{ERROR, "WRITE_WOOD: Write failed"});
 		}
 	}
@@ -206,11 +216,15 @@ void writeWood(int id, int sawSpeed, int feedRate)
 
 void logMessage(Log_t logMsg)
 {
-	if (xSemaphoreTake(xSemaphoreSPIFFS, portMAX_DELAY) == pdFAIL) { return; }
+	if (xSemaphoreTake(xSemaphoreSPI, portMAX_DELAY) == pdFAIL)
+	{
+		return;
+	}
 	File file = SPIFFS.open("/log.txt", "a");
 	if (!file)
 	{
-		xSemaphoreGive(xSemaphoreSPIFFS);
+		vTaskDelay(10 / portTICK_PERIOD_MS);
+		xSemaphoreGive(xSemaphoreSPI);
 		return;
 	}
 
@@ -222,7 +236,8 @@ void logMessage(Log_t logMsg)
 		file = SPIFFS.open("/log.txt", "a");
 		if (!file)
 		{
-			xSemaphoreGive(xSemaphoreSPIFFS);
+			vTaskDelay(10 / portTICK_PERIOD_MS);
+			xSemaphoreGive(xSemaphoreSPI);
 			return;
 		}
 	}
@@ -232,18 +247,23 @@ void logMessage(Log_t logMsg)
 	// format the message like a linux kernel log [uptime] logLevel: message
 	String message = "[" + uptime + "] " + logLevelString[logMsg.level] + ": " + logMsg.message;
 	file.println(message);
-		file.close();
-		xSemaphoreGive(xSemaphoreSPIFFS);
+	file.close();
+	vTaskDelay(10 / portTICK_PERIOD_MS);
+	xSemaphoreGive(xSemaphoreSPI);
 }
 
 void dumpLog()
 {
-	if (xSemaphoreTake(xSemaphoreSPIFFS, portMAX_DELAY) == pdFAIL) { return; }
+	if (xSemaphoreTake(xSemaphoreSPI, portMAX_DELAY) == pdFAIL)
+	{
+		return;
+	}
 
 	File file = SPIFFS.open("/log.txt", "r");
 	if (!file)
 	{
-		xSemaphoreGive(xSemaphoreSPIFFS);
+		vTaskDelay(10 / portTICK_PERIOD_MS);
+		xSemaphoreGive(xSemaphoreSPI);
 		return;
 	}
 
@@ -253,8 +273,33 @@ void dumpLog()
 		Serial.write(file.read());
 	}
 	file.close();
-	
+
 	// delete the file
 	SPIFFS.remove("/log.txt");
-	xSemaphoreGive(xSemaphoreSPIFFS);
+	xSemaphoreGive(xSemaphoreSPI);
+}
+
+void vDumpWood()
+{
+	if (xSemaphoreTake(xSemaphoreSPI, portMAX_DELAY) == pdFAIL)
+	{
+		return;
+	}
+
+	File file = SPIFFS.open("/wood.json", "r");
+	if (!file)
+	{
+		vTaskDelay(10 / portTICK_PERIOD_MS);
+		xSemaphoreGive(xSemaphoreSPI);
+		return;
+	}
+
+	// read the file line by line
+	while (file.available())
+	{
+		Serial.write(file.read());
+	}
+	file.close();
+	vTaskDelay(10 / portTICK_PERIOD_MS);
+	xSemaphoreGive(xSemaphoreSPI);
 }

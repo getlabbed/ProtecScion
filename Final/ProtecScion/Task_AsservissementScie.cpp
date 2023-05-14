@@ -69,6 +69,8 @@ void vTaskAsservissementScie(void *pvParameters) {
       {
         // stop the motor
         motorState = OFF;
+        unsigned int zero = 0;
+        xQueueSend(xQueueKeypad, &zero, 0);
         vSendLog(INFO, "ASSERV: Fast change detected, motor set to OFF");
       }
       else

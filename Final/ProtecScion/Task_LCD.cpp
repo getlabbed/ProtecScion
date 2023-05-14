@@ -22,6 +22,7 @@ void vTaskLCD(void *pvParameters)
   xTimerLCDLine[2] = xTimerCreate("TimerLCDLine3", 1000 / portTICK_PERIOD_MS, pdFALSE, NULL, resetLine2);
   xTimerLCDLine[3] = xTimerCreate("TimerLCDLine4", 1000 / portTICK_PERIOD_MS, pdFALSE, NULL, resetLine3);
 
+  xSemaphoreTake(xSemaphoreSPI, portMAX_DELAY);
   // Connect via SPI. Data pin is #4, clock pin is #5 and latch pin is #6
   Adafruit_LiquidCrystal tempLCD(PIN_DATA, PIN_CLOCK, PIN_LATCH);
   // delay to let the lcd initialise
@@ -30,6 +31,8 @@ void vTaskLCD(void *pvParameters)
 
   lcd->begin(20, 4);
   lcd->clear();
+  vTaskDelay(10 / portTICK_PERIOD_MS);
+  xSemaphoreGive(xSemaphoreSPI);
 
   LCDCommand_t cmdBuffer;
 
@@ -39,7 +42,7 @@ void vTaskLCD(void *pvParameters)
     if (!xQueueReceive(xQueueLCD, &cmdBuffer, portMAX_DELAY)) continue;
 
     // take the semaphore to access the LCD
-    while (!xSemaphoreTake(xSemaphoreLCD, portMAX_DELAY)) vTaskDelay(10 / portTICK_PERIOD_MS);
+    while (!xSemaphoreTake(xSemaphoreSPI, portMAX_DELAY)) vTaskDelay(10 / portTICK_PERIOD_MS);
 
     // if the duration is 0, we don't need to set a timer
     // use something like this : u8Line = (u8Line == 1) ? 2 : (u8Line == 2) ? 1 : u8Line; to get the right line
@@ -61,7 +64,8 @@ void vTaskLCD(void *pvParameters)
     // set the line on the lcd
     lcd->setCursor(0, cmdBuffer.line);
     lcd->print(cmdBuffer.message);
-    xSemaphoreGive(xSemaphoreLCD);
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+    xSemaphoreGive(xSemaphoreSPI);
   }
 }
 
@@ -78,13 +82,14 @@ void setResetLine(unsigned int line, unsigned int duration)
 
 void resetLine(int line)
 {
-  if (xSemaphoreTake(xSemaphoreLCD, portMAX_DELAY) == pdTRUE)
+  if (xSemaphoreTake(xSemaphoreSPI, portMAX_DELAY) == pdTRUE)
   {
     lcd->setCursor(0, line);
     lcd->print("                    ");
     lcd->setCursor(0, line);
     lcd->print(buffer.line[line]);
-    xSemaphoreGive(xSemaphoreLCD);
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+    xSemaphoreGive(xSemaphoreSPI);
   }
 }
 

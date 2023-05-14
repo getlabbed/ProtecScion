@@ -19,7 +19,7 @@
 #include "Task_AsservissementScie.h"
 #include "Task_IOFlash.h"
 #include "Task_SoundSensor.h"
-#include "Task_IRSensor.h"
+#include "Task_Apprentissage.h"
 #include "Task_LCD.h"
 #include "Task_DHT11.h"
 #include "Task_Menu.h"
@@ -30,7 +30,7 @@
 TaskHandle_t xTaskAsservissementScie;
 TaskHandle_t xTaskIOFlash;
 TaskHandle_t xTaskSoundSensor;
-TaskHandle_t xTaskIRSensor;
+TaskHandle_t xTaskApprentissage;
 TaskHandle_t xTaskLCD;
 TaskHandle_t xTaskDHT11;
 TaskHandle_t xTaskMenu;
@@ -39,7 +39,7 @@ TaskHandle_t xTaskLED;
 
 // define semaphores
 SemaphoreHandle_t xSemaphoreSerial;
-SemaphoreHandle_t xSemaphoreSPIFFS;
+SemaphoreHandle_t xSemaphoreSPI;
 SemaphoreHandle_t xSemaphoreLCD;
 
 // define queues
@@ -53,8 +53,9 @@ QueueHandle_t xQueueAmbiantHumidity;
 QueueHandle_t xQueueAmbiantTemperature;
 QueueHandle_t xQueueHeatIndex;
 QueueHandle_t xQueueKeypad; 
-QueueHandle_t xQueueIRDistance;
+QueueHandle_t xQueueApprentissageControl;
 QueueHandle_t xQueueLED;
+QueueHandle_t xQueueAverageFeedRate;
 
 /// --------- FONCTIONS --------- ///
 
@@ -91,15 +92,15 @@ void vSendLog(LogLevel_t level, String message)
  * @author Olivier David Laplante @date 30-04-2023
  */
 void vCreateAllTasks() {
-  //xTaskCreatePinnedToCore(vTaskAsservissementScie, "AsservissementScie", TASK_STACK_SIZE, NULL, TASK_ASSERVISSEMENTSCIE_PRIORITY, &xTaskAsservissementScie, TASK_ASSERVISSEMENTSCIE_CORE);
+  xTaskCreatePinnedToCore(vTaskAsservissementScie, "AsservissementScie", TASK_STACK_SIZE, NULL, TASK_ASSERVISSEMENTSCIE_PRIORITY, &xTaskAsservissementScie, TASK_ASSERVISSEMENTSCIE_CORE);
   xTaskCreatePinnedToCore(vTaskIOFlash, "IOFlash", TASK_STACK_SIZE, NULL, TASK_IOFLASH_PRIORITY, &xTaskIOFlash, TASK_IOFLASH_CORE);
-  //xTaskCreatePinnedToCore(vTaskSoundSensor, "SoundSensor", TASK_STACK_SIZE, NULL, TASK_SOUNDSENSOR_PRIORITY, &xTaskSoundSensor, TASK_SOUNDSENSOR_CORE);
-  //xTaskCreatePinnedToCore(vTaskIRSensor, "IRSensor", TASK_STACK_SIZE, NULL, TASK_IRSENSOR_PRIORITY, &xTaskIRSensor, TASK_IRSENSOR_CORE);
+  xTaskCreatePinnedToCore(vTaskSoundSensor, "SoundSensor", TASK_STACK_SIZE, NULL, TASK_SOUNDSENSOR_PRIORITY, &xTaskSoundSensor, TASK_SOUNDSENSOR_CORE);
+  xTaskCreatePinnedToCore(vTaskApprentissage, "Apprentissage", TASK_STACK_SIZE, NULL, TASK_APPRENTISSAGE_PRIORITY, &xTaskApprentissage, TASK_APPRENTISSAGE_CORE);
   xTaskCreatePinnedToCore(vTaskLCD, "LCD", TASK_STACK_SIZE, NULL, TASK_LCD_PRIORITY, &xTaskLCD, TASK_LCD_CORE);
-  //xTaskCreatePinnedToCore(vTaskDHT11, "DHT11", TASK_STACK_SIZE, NULL, TASK_DHT11_PRIORITY, &xTaskDHT11, TASK_DHT11_CORE);
+  xTaskCreatePinnedToCore(vTaskDHT11, "DHT11", TASK_STACK_SIZE, NULL, TASK_DHT11_PRIORITY, &xTaskDHT11, TASK_DHT11_CORE);
   xTaskCreatePinnedToCore(vTaskMenu, "Menu", TASK_STACK_SIZE, NULL, TASK_MENU_PRIORITY, &xTaskMenu, TASK_MENU_CORE);
   xTaskCreatePinnedToCore(vTaskKeypad, "Keypad", TASK_STACK_SIZE, NULL, TASK_KEYPAD_PRIORITY, &xTaskKeypad, TASK_KEYPAD_CORE);
-  //xTaskCreatePinnedToCore(vTaskLED, "LED", TASK_STACK_SIZE, NULL, TASK_LED_PRIORITY, &xTaskLED, TASK_LED_CORE);
+  xTaskCreatePinnedToCore(vTaskLED, "LED", TASK_STACK_SIZE, NULL, TASK_LED_PRIORITY, &xTaskLED, TASK_LED_CORE);
 }
 
 /** 
@@ -110,11 +111,11 @@ void vCreateAllTasks() {
  */
 void vSetupSemaphores() {
   xSemaphoreSerial = xSemaphoreCreateBinary();
-  xSemaphoreSPIFFS = xSemaphoreCreateBinary();
+  xSemaphoreSPI = xSemaphoreCreateBinary();
   xSemaphoreLCD = xSemaphoreCreateBinary();
 
   xSemaphoreGive(xSemaphoreSerial);
-  xSemaphoreGive(xSemaphoreSPIFFS);
+  xSemaphoreGive(xSemaphoreSPI);
   xSemaphoreGive(xSemaphoreLCD);
 }
 
@@ -133,10 +134,9 @@ void vSetupQueues() {
   xQueueLCD = xQueueCreate(10, sizeof(LCDCommand_t));
   xQueueAmbiantHumidity = xQueueCreate(1, sizeof(float));
   xQueueAmbiantTemperature = xQueueCreate(1, sizeof(float));
-  xQueueHeatIndex = xQueueCreate(1, sizeof(float));
   xQueueKeypad = xQueueCreate(10, sizeof(char));
-  xQueueIRDistance = xQueueCreate(1, sizeof(unsigned int));
-  xQueueLED = xQueueCreate(1, sizeof(unsigned int));
+  xQueueLED = xQueueCreate(1, sizeof(LedState_t));
+  xQueueApprentissageControl = xQueueCreate(1, sizeof(unsigned int));
 }
 
 /// --------- SETUP & LOOP --------- ///

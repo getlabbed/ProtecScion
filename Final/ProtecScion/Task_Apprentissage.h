@@ -1,8 +1,8 @@
 /**
  * Nom du fichier :
- *  @name Task_IRSensor.h
+ *  @name Task_Apprentissage.h
  * Description :
- *  @brief Fichier d'en-tête du fichier Task_IRSensor.cpp.
+ *  @brief Fichier d'en-tête du fichier Task_Apprentissage.cpp.
  * restrictions:
  *  Pour type de carte ESP32 Feather
  * Historique :
@@ -29,4 +29,4 @@ float convertToDistance(int sensorValue);
 
 // Déclaration des tâches
 
-void vTaskIRSensor(void *pvParameters);
+void vTaskApprentissage(void *pvParameters);

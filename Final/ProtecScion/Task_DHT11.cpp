@@ -26,7 +26,7 @@ void vTaskDHT11(void *pvParameters)
 		
 		if (isnan(fHumidity) || isnan(fTemperature))
 		{
-			vSendLog(ERROR, "DHT11: ERREUR           ");
+			//vSendLog(ERROR, "DHT11: ERREUR           ");
 		}
 		else{
 			float fHeatIndex = dht.computeHeatIndex(fTemperature, fHumidity, false); // false = °Celsius
