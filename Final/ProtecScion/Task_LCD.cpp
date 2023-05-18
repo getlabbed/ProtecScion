@@ -1,12 +1,23 @@
+/**
+ * @file Task_LCD.cpp
+ * @author Olivier David Laplante (skkeye@gmail.com)
+ * @brief Fichier d'implémentation de la tâche d'asservissement pour contrôler l'écran LCD
+ * @note restrictions: Pour type de carte ESP32 Feather
+ * @version 1.0
+ * @date 2023-05-07 - Entrée initiale du code
+ * @date 2023-05-18 - Entrée finale du code
+ * 
+ */
+
 #include "Task_LCD.h"
 #include "Adafruit_LiquidCrystal.h"
 
-// Global variables
+// Variables globales
 TimerHandle_t xTimerLCDLine[4];
 
 LCDBuffer_t buffer;
 
-// lcd pointer
+// pointer
 Adafruit_LiquidCrystal *lcd;
 
 struct lineNumbers
@@ -16,7 +27,7 @@ struct lineNumbers
 
 void vTaskLCD(void *pvParameters)
 {
-  // init timers
+  // Initialisation des timers
   xTimerLCDLine[0] = xTimerCreate("TimerLCDLine1", 1000 / portTICK_PERIOD_MS, pdFALSE, NULL, resetLine0);
   xTimerLCDLine[1] = xTimerCreate("TimerLCDLine2", 1000 / portTICK_PERIOD_MS, pdFALSE, NULL, resetLine1);
   xTimerLCDLine[2] = xTimerCreate("TimerLCDLine3", 1000 / portTICK_PERIOD_MS, pdFALSE, NULL, resetLine2);
@@ -24,10 +35,10 @@ void vTaskLCD(void *pvParameters)
 
   xSemaphoreTake(xSemaphoreI2C, portMAX_DELAY);
 
-  // Connect via SPI. Data pin is #4, clock pin is #5
+  // Connection via I2c, DAT: Broche 3, CLK: Broche 5
   Adafruit_LiquidCrystal tempLCD(LCD_I2C_ADDR, &xWireBus);
 
-  // delay to let the lcd initialise
+  // Laisser le temps a l'écran d'initialiser
   vTaskDelay(100 / portTICK_PERIOD_MS);
   lcd = &tempLCD;
 
@@ -40,10 +51,10 @@ void vTaskLCD(void *pvParameters)
 
   while (1)
   {
-    // wait for a command from the queue
+    // Attendre de recevoir une commande dans la file
     if (!xQueueReceive(xQueueLCD, &cmdBuffer, portMAX_DELAY)) continue;
 
-    // take the semaphore to access the LCD
+    // Prendre le sémaphore pour avoir accès à l'écran LCD
     while (!xSemaphoreTake(xSemaphoreI2C, portMAX_DELAY)) vTaskDelay(10 / portTICK_PERIOD_MS);
 
     // if the duration is 0, we don't need to set a timer

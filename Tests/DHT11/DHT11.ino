@@ -35,8 +35,6 @@ void loop()
 		Serial.println("ERROR: Impossible de lire les données du capteur DHT !");
 	}
 
-	float fHeatIndex = dht.computeHeatIndex(fTemperature, fHumidity, false);
-
 	Serial.print("Humidity: ");
 	Serial.print(fHumidity);
 	Serial.print("% ");
@@ -44,8 +42,4 @@ void loop()
 	Serial.print("Temperature: ");
 	Serial.print(fTemperature);
 	Serial.print("C ");
-
-	Serial.print("Heat index: ");
-	Serial.print(fHeatIndex);
-	Serial.println("C ");
 }

@@ -1,130 +1,148 @@
+/**
+ * @file Task_AsservissementScie.cpp
+ * @author Olivier David Laplante (skkeye@gmail.com)
+ * @brief Fichier d'implémentation de la tâche d'asservissement de la scie (PID)
+ *        et de la detection des KickBacks
+ * @note restrictions: Pour type de carte ESP32 Feather
+ * @version 1.0
+ * @date 2023-04-30 - Entrée initiale du code
+ * @date 2023-05-18 - Entrée finale du code
+ * 
+ */
 
 #include "Task_AsservissementScie.h"
 
 #include <PID_v2.h>
 
 // global variables
-double average[10] = {0,0,0,0,0,0,0,0,0,0};
-double lastInputs[4] = {0,0,0,0};
-double lastOutput = 0;
+double dAverage[10] = {0,0,0,0,0,0,0,0,0,0};
+double dLastInputs[4] = {0,0,0,0};
+double dLastOutput = 0;
 
+/**
+ * @brief Tache d'asservissement de la scie (PID) et de la detection des KickBacks
+ * @author Olivier David Laplante
+ * 
+ * @param pvParameters - Non utilisé
+ */
 void vTaskAsservissementScie(void *pvParameters) {
   // local variables
-  MotorState_t motorState = OFF; // pas pour prod
-  unsigned int target = PID_INITIAL_TARGET; // etre capable de setter pour prod
+  MotorState_t xMotorState = OFF; // pas pour prod
+  unsigned int uiTarget = PID_INITIAL_TARGET; // etre capable de setter pour prod
   // PID instance
-  PID_v2 myPID(PID_KP, PID_KI, PID_KD, PID::Direct);
+  PID_v2 xPID(PID_KP, PID_KI, PID_KD, PID::Direct);
 
   // PWM setup
   analogWriteResolution(PWM_RESOLUTION);
   analogWriteFrequency(PWM_FREQUENCY);
 
   // PID setup
-  myPID.Start(analogRead(PIN_SENSE), 0, target);
-  myPID.SetSampleTime(PID_SAMPLE_TIME);
+  xPID.Start(analogRead(PIN_SENSE), 0, uiTarget);
+  xPID.SetSampleTime(PID_SAMPLE_TIME);
 
   while (true) {
-    if (xQueueReceive(xQueueSawSpeed, &target, 0) == pdTRUE)
+    if (xQueueReceive(xQueueSawSpeed, &uiTarget, 0) == pdTRUE)
     {
-      if (target == 0 || target > 4096)
+      if (uiTarget == 0 || uiTarget > 4096)
       {
-        motorState = OFF;
-        vSendLog(INFO, "ASSERV: Received new target, motor set to OFF");
+        xMotorState = OFF;
+        vSendLog(INFO, "ASSERV: Received new uiTarget, motor set to OFF");
       }
       else
       {
-        motorState = INIT;
-        vSendLog(INFO, "ASSERV: Received new target, motor set to INIT");
+        xMotorState = INIT;
+        vSendLog(INFO, "ASSERV: Received new uiTarget, motor set to INIT");
       }
     }
 
-    if (motorState == OFF)
+    if (xMotorState == OFF)
     {
-      myPID.Setpoint(0);
-      myPID.Run(0);
+      xPID.Setpoint(0);
+      xPID.Run(0);
       analogWrite(PIN_MOTOR, 0);
     }
-    else if (motorState == INIT)
+    else if (xMotorState == INIT)
     {
-      myPID.Setpoint(target);
-      motorState = STARTING;
+      xPID.Setpoint(uiTarget);
+      xMotorState = STARTING;
       vSendLog(INFO, "ASSERV: Motor set to STARTING");
     }
-    else if (motorState == STARTING)
+    else if (xMotorState == STARTING)
     {
-      const double input = analogRead(PIN_SENSE);
-      const double output = myPID.Run(input);
-      analogWrite(PIN_MOTOR, output);
-      bIsFastChange(input, ANTI_RECUL_THRESHOLD);
-      if (abs(input - target) < ANTI_RECUL_ACTIVATION_THRESHOLD)
+      const double cdInput = analogRead(PIN_SENSE);
+      const double cdOutput = xPID.Run(cdInput);
+      analogWrite(PIN_MOTOR, cdOutput);
+      bIsFastChange(cdInput, ANTI_RECUL_THRESHOLD);
+      if (abs(cdInput - uiTarget) < ANTI_RECUL_ACTIVATION_THRESHOLD)
       {
-        motorState = RUNNING;
-        vSendLog(INFO, "ASSERV: Motor has reached target, set to RUNNING");
+        xMotorState = RUNNING;
+        vSendLog(INFO, "ASSERV: Motor has reached uiTarget, set to RUNNING");
       }
     }
-    else if (motorState == RUNNING)
+    else if (xMotorState == RUNNING)
     {
-      const double input = analogRead(PIN_SENSE);
-      if (bIsFastChange(input, ANTI_RECUL_THRESHOLD))
+      const double cdInput = analogRead(PIN_SENSE);
+      if (bIsFastChange(cdInput, ANTI_RECUL_THRESHOLD))
       {
         // stop the motor
-        motorState = OFF;
-        unsigned int zero = 0;
-        xQueueSend(xQueueKeypad, &zero, 0);
+        xMotorState = OFF;
+        unsigned int uiZero = 0;
+        xQueueSend(xQueueKeypad, &uiZero, 0);
         vSendLog(INFO, "ASSERV: Fast change detected, motor set to OFF");
       }
       else
       {
         // update the PID
-        const double output = myPID.Run(input);
-        analogWrite(PIN_MOTOR, output);
+        const double cdOutput = xPID.Run(cdInput);
+        analogWrite(PIN_MOTOR, cdOutput);
       }
     }
     vTaskDelay(PID_SAMPLE_TIME / portTICK_PERIOD_MS);
   }
 }
 
-bool bIsFastChange(double input, int threshold)
+/**
+ * @brief Fonction qui detecte les changements rapides de la vitesse de la scie
+ * @author Olivier David Laplante
+ * @note Cette fonction est utilisee pour detecter les KickBacks
+ * 
+ * @param cdInput - Valeur de la vitesse de la scie
+ * @param iThreshold - Seuil de detection
+ * @return true - Si un changement rapide est detecte
+ * @return false - Si aucun changement rapide n'est detecte
+ */
+bool bIsFastChange(double cdInput, int iThreshold)
 {
-  // // only check every 100ms
-  // if (millis() - lastOutput < 20)
-  // {
-  //   return false;
-  // }
-  
-  // lastOutput = millis();
-
-  bool result = false;
   for (int i = 0; i < 9; i++)
   {
-    average[i] = average[i+1];
+    dAverage[i] = dAverage[i+1];
   }
-  average[9] = input;
+  dAverage[9] = cdInput;
 
-  double sum = 0;
+  double dSum = 0;
   for (int i = 0; i < 10; i++)
   {
-    sum += average[i];
+    dSum += dAverage[i];
   }
-  sum /= 10;
+  dSum /= 10;
 
   for (int i = 0; i < 3; i++)
   {
-    lastInputs[i] = lastInputs[i+1];
+    dLastInputs[i] = dLastInputs[i+1];
   }
-  lastInputs[3] = sum;
+  dLastInputs[3] = dSum;
 
-  double sumLast = 0;
+  double dSumLast = 0;
   for (int i = 0; i < 4; i++)
   {
-    sumLast += lastInputs[i];
+    dSumLast += dLastInputs[i];
   }
-  sumLast /= 4;
+  dSumLast /= 4;
 
-  // Serial.print("sum: ");
-  // Serial.print(sum);
-  // Serial.print(" sumLast: ");
-  // Serial.println(sumLast);
+  // Serial.print("dSum: ");
+  // Serial.print(dSum);
+  // Serial.print(" dSumLast: ");
+  // Serial.println(dSumLast);
 
-  return abs(sumLast - sum) > threshold;
+  return abs(dSumLast - dSum) > iThreshold;
 }

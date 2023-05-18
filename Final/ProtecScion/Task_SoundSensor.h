@@ -1,12 +1,12 @@
-/**
- * Nom du fichier :
- *  @name Task_SoundSensor.h
- * Description :
- *  @brief File d'en-tête du fichier Task_SoundSensor.cpp.
- * restrictions:
- *  Pour type de carte ESP32 Feather
- * Historique :
- *  @date 2023-0?-?? @author Yanick Labelle - Entrée initiale du code.
+ /**
+ * @file Task_SoundSensor.h
+ * @author Yanick Labelle (getlabbed@proton.me)
+ * @brief File d'en-tête du fichier Task_SoundSensor.cpp.
+ * @note restrictions: Pour type de carte ESP32 Feather
+ * @version 1.0
+ * @date 2023-05-06 - Entrée initiale du code
+ * @date 2023-05-18 - Entrée finale du code 
+ * 
  */
 
 #include "global.h"

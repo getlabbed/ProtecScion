@@ -1,12 +1,12 @@
-/**
- * Nom du fichier :
- *  @name Task_Menu.cpp
- * Description :
- *  @brief Code permettant de gérer le menu de l'application.
- * restrictions:
- *  Pour type de carte ESP32 Feather
- * Historique :
- *  @date 2023-05-13 @author Olivier David Laplante - Entrée initiale du code.
+ /**
+ * @file Task_Menu.cpp
+ * @author Olivier David Laplante (skkeye@gmail.com)
+ * @brief Code permettant de gérer le menu de l'application.
+ * @note restrictions: Pour type de carte ESP32 Feather
+ * @version 1.0
+ * @date 2023-05-13 - Entrée initiale du code
+ * @date 2023-05-18 - Entrée finale du code 
+ * 
  */
 
 #include "Task_Menu.h"
@@ -16,7 +16,7 @@
 unsigned int uiMode = 0; // Mode sélectionné | 0: Rien, 1: Opération, 2: Apprendre, 3: Manuel, 4: Modifier
 String sChoice;          // Choix de l'utilisateur
 char cChoice;            // choix de l'utilisateur
-Wood_t wood;             // Bois sélectionné
+Wood_t xWood;            // Bois sélectionné
 YASM xStateMachine;      // Machine à état
 
 // Tache principale
@@ -70,7 +70,7 @@ void xStateAdminMode()
 	{
 		vSendLog(DUMP,"");
 	}
-	else if (cChoice == '2') // Imprimer le journal et supprimer les fichiers (wood et log)
+	else if (cChoice == '2') // Imprimer le journal et supprimer les fichiers (xWood et log)
 	{
 		vSendLog(DUMP,"PURGE");
 	}
@@ -160,13 +160,13 @@ void xStateWoodSel()
 	}
 	else if (cChoice == '*')
 	{
-		wood.code = sChoice.toInt();
+		xWood.code = sChoice.toInt();
 		if (uiMode <= 2)
 		{
-			xQueueSend(xQueueApprentissageControl, &(wood.code), portMAX_DELAY); // TBD
-			xQueueSend(xQueueRequestWood, &(wood.code), portMAX_DELAY);
-			xQueueReceive(xQueueReadWood, &wood, portMAX_DELAY);
-			unsigned int uiSawSpeed = (wood.sawSpeed * 4096) / 100;
+			xQueueSend(xQueueApprentissageControl, &(xWood.code), portMAX_DELAY); // TBD
+			xQueueSend(xQueueRequestWood, &(xWood.code), portMAX_DELAY);
+			xQueueReceive(xQueueReadWood, &xWood, portMAX_DELAY);
+			unsigned int uiSawSpeed = (xWood.sawSpeed * 4096) / 100;
 			xQueueSend(xQueueSawSpeed, &uiSawSpeed, portMAX_DELAY);
 			sChoice = "";
 			xStateMachine.next(xStateActive);
@@ -175,10 +175,10 @@ void xStateWoodSel()
 		{
 			if (uiMode == 4)
 			{
-				xQueueSend(xQueueRequestWood, &(wood.code), portMAX_DELAY);
-				xQueueReceive(xQueueReadWood, &wood, portMAX_DELAY);
+				xQueueSend(xQueueRequestWood, &(xWood.code), portMAX_DELAY);
+				xQueueReceive(xQueueReadWood, &xWood, portMAX_DELAY);
 			}
-			sChoice = (uiMode == 4) ? String(wood.sawSpeed) : "";
+			sChoice = (uiMode == 4) ? String(xWood.sawSpeed) : "";
 			xStateMachine.next(xStateEditSawSpeed);
 		}
 	}
@@ -206,8 +206,8 @@ void xStateEditSawSpeed()
 	else if (cChoice == '*' && sChoice.length() > 1)
 	{
 		if (sChoice.toInt() > 100) sChoice = "100";
-		wood.sawSpeed = sChoice.toInt();
-		sChoice = (uiMode == 4) ? String(wood.feedRate, 0) : "";
+		xWood.sawSpeed = sChoice.toInt();
+		sChoice = (uiMode == 4) ? String(xWood.feedRate, 0) : "";
 		xStateMachine.next(xStateEditFeedRate);
 	}
 	else if (cChoice >= '0' && cChoice <= '9' && sChoice.length() < 3)
@@ -234,8 +234,8 @@ void xStateEditFeedRate()
 	else if (cChoice == '*' && sChoice.length() > 1)
 	{
 		if (sChoice.toInt() > 300) sChoice = "300";
-		wood.feedRate = sChoice.toInt();
-		xQueueSend(xQueueWriteWood, &wood, portMAX_DELAY);
+		xWood.feedRate = sChoice.toInt();
+		xQueueSend(xQueueWriteWood, &xWood, portMAX_DELAY);
 		xSemaphoreTake(xSemaphoreLog, portMAX_DELAY);
 		sChoice = "";
 		xStateMachine.next(xStateModeSel);
@@ -251,9 +251,9 @@ void xStateActive()
 {
 	vSendLog(INFO, "Menu: Executed xStateActive");
 	int flag = uiMode - 2; // -1 = Mode opération, 0 = Mode apprentissage
-	unsigned int zero = 0;
-	xQueueSend(xQueueApprentissageControl, &flag, portMAX_DELAY); // Arrêter la lecture de la distance
-	xQueueSend(xQueueSawSpeed, &zero, portMAX_DELAY); // Arrêter la scie
+	unsigned int uiZero = 0;
+	xQueueSend(xQueueApprentissageControl, &flag, portMAX_DELAY); // Arrêter la lecture de la fDistance
+	xQueueSend(xQueueSawSpeed, &uiZero, portMAX_DELAY); // Arrêter la scie
 	xStateMachine.next(xStateModeSel);
 }
 
@@ -299,7 +299,7 @@ void vUpdateScreen()
 	{
 		vSendLCDCommand("==   MODE ADMIN  ==", 0, 0);
 		vSendLCDCommand("1. Journalisation  ", 1, 0);
-		vSendLCDCommand("2. Remise a zero   ", 2, 0);
+		vSendLCDCommand("2. Remise a uiZero   ", 2, 0);
 		vSendLCDCommand("3.                 ", 3, 0);
 	}
 }
