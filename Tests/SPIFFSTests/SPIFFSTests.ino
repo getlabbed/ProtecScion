@@ -1,6 +1,12 @@
-// Mode manuel: ajouter un bois si un bois n
-//
-//
+/**
+ * @file SPIFFSTests.ino
+ * @author Olivier David Laplante
+ * @author Yanick Labelle
+ * @brief Code test pour l'écriture et la lecture de fichier avec SPIFFS
+ * @version 0.1
+ * @date 2023-04-30
+ * 
+ */
 
 
 #include "FS.h"

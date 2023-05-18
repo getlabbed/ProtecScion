@@ -1,3 +1,12 @@
+/**
+ * @file WoodTemp.ino
+ * @author Olivier David Laplante
+ * @brief Code test pour la lecture de la température du bois
+ * @version 0.1
+ * @date 2023-05-17
+ * 
+ */
+
 #include <Adafruit_MLX90614.h>
 
 #include <Arduino.h>
