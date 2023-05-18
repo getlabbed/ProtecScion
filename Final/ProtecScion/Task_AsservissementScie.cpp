@@ -46,6 +46,9 @@ void vTaskAsservissementScie(void *pvParameters) {
     }
     else if (motorState == INIT)
     {
+      // Send the BOTH state to LED
+      const LedState_t cxBoth = LED_BOTH;
+      xQueueSend(xQueueLED, &cxBoth, 0);
       myPID.Setpoint(target);
       motorState = STARTING;
       vSendLog(INFO, "ASSERV: Motor set to STARTING");
@@ -58,6 +61,9 @@ void vTaskAsservissementScie(void *pvParameters) {
       bIsFastChange(input, ANTI_RECUL_THRESHOLD);
       if (abs(input - target) < ANTI_RECUL_ACTIVATION_THRESHOLD)
       {
+        // send the GREEN state to LED
+        const LedState_t cxGreen = LED_GREEN;
+        xQueueSend(xQueueLED, &cxGreen, 0);
         motorState = RUNNING;
         vSendLog(INFO, "ASSERV: Motor has reached target, set to RUNNING");
       }
@@ -67,6 +73,9 @@ void vTaskAsservissementScie(void *pvParameters) {
       const double input = analogRead(PIN_SENSE);
       if (bIsFastChange(input, ANTI_RECUL_THRESHOLD))
       {
+        // send the RED state to LED
+        const LedState_t cxRed = LED_RED;
+        xQueueSend(xQueueLED, &cxRed, 0);
         // stop the motor
         motorState = OFF;
         unsigned int zero = 0;

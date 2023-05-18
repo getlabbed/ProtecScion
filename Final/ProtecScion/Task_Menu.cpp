@@ -141,6 +141,9 @@ void xStateModeSel()
 		sChoice = "";
 		xStateMachine.next(xStateAdminPassword);
 	}
+	// send the off state to led
+	const LedState_t led_state = LED_OFF;
+	xQueueSend(xQueueLED, &led_state, 0);
 }
 
 // sélection du bois
@@ -249,6 +252,12 @@ void xStateEditFeedRate()
 // Mode actif
 void xStateActive()
 {
+	if (cChoice != 0)
+	{
+		// send the off state to led
+		const LedState_t led_state = LED_OFF;
+		xQueueSend(xQueueLED, &led_state, 0);
+	}
 	vSendLog(INFO, "Menu: Executed xStateActive");
 	int flag = uiMode - 2; // -1 = Mode opération, 0 = Mode apprentissage
 	unsigned int zero = 0;
