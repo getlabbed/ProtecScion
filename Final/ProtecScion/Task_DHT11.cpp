@@ -16,24 +16,27 @@
 
 void vTaskDHT11(void *pvParameters)
 {
+	int iTrash;
+	float fHumidity;
+	float fTemperature;
+	float fHeatIndex;
+	String sTextLCD;
 	DHT dht(PIN_DHT11, DHT11);
 	dht.begin();
 	while (true)
 	{
-		vTaskDelay(1000 / portTICK_PERIOD_MS);
-		float fHumidity = dht.readHumidity();
-		float fTemperature = dht.readTemperature();
-		
+		if (xQueueReceive(xQueueAmbiant, &iTrash, portMAX_DELAY) == pdFALSE) continue;
+
+		fHumidity = dht.readHumidity();
+		fTemperature = dht.readTemperature();
+
 		if (isnan(fHumidity) || isnan(fTemperature))
 		{
 			//vSendLog(ERROR, "DHT11: ERREUR           ");
+			continue;
 		}
-		else{
-			float fHeatIndex = dht.computeHeatIndex(fTemperature, fHumidity, false); // false = °Celsius
 
-			xQueueSend(xQueueAmbiantHumidity, &fHumidity, 0);
-			xQueueSend(xQueueAmbiantTemperature, &fTemperature, 0);
-			xQueueSend(xQueueHeatIndex, &fHeatIndex, 0);
-		}
+		sTextLCD = "Ambi:" + String(fTemperature, 2) + "C " + String(fHumidity, 2) + "%";
+		vSendLCDCommand(sTextLCD, 2, 0);
 	}
 }

@@ -18,4 +18,4 @@ const String logLevelString[] = {"INFO", "WARNING", "ERROR"};
 
 void logMessage(Log_t logMessage);
 void dumpLog();
-void vDumpWood();
+void vDumpWood(bool bPurge);

@@ -22,9 +22,11 @@ void vTaskLCD(void *pvParameters)
   xTimerLCDLine[2] = xTimerCreate("TimerLCDLine3", 1000 / portTICK_PERIOD_MS, pdFALSE, NULL, resetLine2);
   xTimerLCDLine[3] = xTimerCreate("TimerLCDLine4", 1000 / portTICK_PERIOD_MS, pdFALSE, NULL, resetLine3);
 
-  xSemaphoreTake(xSemaphoreSPI, portMAX_DELAY);
-  // Connect via SPI. Data pin is #4, clock pin is #5 and latch pin is #6
-  Adafruit_LiquidCrystal tempLCD(PIN_DATA, PIN_CLOCK, PIN_LATCH);
+  xSemaphoreTake(xSemaphoreI2C, portMAX_DELAY);
+
+  // Connect via SPI. Data pin is #4, clock pin is #5
+  Adafruit_LiquidCrystal tempLCD(LCD_I2C_ADDR, &xWireBus);
+
   // delay to let the lcd initialise
   vTaskDelay(100 / portTICK_PERIOD_MS);
   lcd = &tempLCD;
@@ -32,7 +34,7 @@ void vTaskLCD(void *pvParameters)
   lcd->begin(20, 4);
   lcd->clear();
   vTaskDelay(10 / portTICK_PERIOD_MS);
-  xSemaphoreGive(xSemaphoreSPI);
+  xSemaphoreGive(xSemaphoreI2C);
 
   LCDCommand_t cmdBuffer;
 
@@ -42,7 +44,7 @@ void vTaskLCD(void *pvParameters)
     if (!xQueueReceive(xQueueLCD, &cmdBuffer, portMAX_DELAY)) continue;
 
     // take the semaphore to access the LCD
-    while (!xSemaphoreTake(xSemaphoreSPI, portMAX_DELAY)) vTaskDelay(10 / portTICK_PERIOD_MS);
+    while (!xSemaphoreTake(xSemaphoreI2C, portMAX_DELAY)) vTaskDelay(10 / portTICK_PERIOD_MS);
 
     // if the duration is 0, we don't need to set a timer
     // use something like this : u8Line = (u8Line == 1) ? 2 : (u8Line == 2) ? 1 : u8Line; to get the right line
@@ -64,8 +66,9 @@ void vTaskLCD(void *pvParameters)
     // set the line on the lcd
     lcd->setCursor(0, cmdBuffer.line);
     lcd->print(cmdBuffer.message);
-    vTaskDelay(10 / portTICK_PERIOD_MS);
-    xSemaphoreGive(xSemaphoreSPI);
+    // vTaskDelay(100 / portTICK_PERIOD_MS);
+    xSemaphoreGive(xSemaphoreLCDCommand);
+    xSemaphoreGive(xSemaphoreI2C);
   }
 }
 
@@ -82,14 +85,14 @@ void setResetLine(unsigned int line, unsigned int duration)
 
 void resetLine(int line)
 {
-  if (xSemaphoreTake(xSemaphoreSPI, portMAX_DELAY) == pdTRUE)
+  if (xSemaphoreTake(xSemaphoreI2C, portMAX_DELAY) == pdTRUE)
   {
     lcd->setCursor(0, line);
     lcd->print("                    ");
     lcd->setCursor(0, line);
     lcd->print(buffer.line[line]);
     vTaskDelay(10 / portTICK_PERIOD_MS);
-    xSemaphoreGive(xSemaphoreSPI);
+    xSemaphoreGive(xSemaphoreI2C);
   }
 }
 

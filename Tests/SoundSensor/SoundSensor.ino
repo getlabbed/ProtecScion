@@ -12,7 +12,7 @@
 
 #include <Arduino.h>
 
-#define SOUND_SENSOR_PIN A2
+#define SOUND_SENSOR_PIN 34
 #define RESOLUTION 1024
 #define VOLTAGE_REFERENCE 3.3
 

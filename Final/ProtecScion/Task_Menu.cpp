@@ -34,15 +34,45 @@ void vTaskMenu(void *pvParameters)
 	}
 }
 
+void xStateAdminPassword()
+{
+	if (cChoice >= '0' && cChoice <= '9' && sChoice.length() < 4)
+	{
+		sChoice.concat(cChoice);
+	}
+	else if (cChoice == '#')
+	{
+		if (sChoice.length() > 0)
+		{
+			sChoice = "";
+		}
+		else
+		{
+			xStateMachine.next(xStateModeSel);
+		}
+	}
+	else if (cChoice == '*')
+	{
+		if (sChoice == ADMIN_PASSWORD)
+		{
+			xStateMachine.next(xStateAdminMode);
+		}
+		else
+		{
+			xStateMachine.next(xStateModeSel);
+		}
+	}
+}
+
 void xStateAdminMode()
 {
-	if (cChoice == '1') // Dump Log
+	if (cChoice == '1') // Imprimer le journal
 	{
 		vSendLog(DUMP,"");
 	}
-	else if (cChoice == '2')
+	else if (cChoice == '2') // Imprimer le journal et supprimer les fichiers (wood et log)
 	{
-		
+		vSendLog(DUMP,"PURGE");
 	}
 	else if (cChoice == '3')
 	{
@@ -108,7 +138,8 @@ void xStateModeSel()
 	}
 	else if (cChoice == '*') 
 	{
-		xStateMachine.next(xStateAdminMode);
+		sChoice = "";
+		xStateMachine.next(xStateAdminPassword);
 	}
 }
 
@@ -129,14 +160,14 @@ void xStateWoodSel()
 	}
 	else if (cChoice == '*')
 	{
+		wood.code = sChoice.toInt();
 		if (uiMode <= 2)
 		{
-			if (uiMode == 2)
-			{
-				xQueueSend(xQueueApprentissageControl, &(wood.code), portMAX_DELAY); // TBD
-			}
+			xQueueSend(xQueueApprentissageControl, &(wood.code), portMAX_DELAY); // TBD
 			xQueueSend(xQueueRequestWood, &(wood.code), portMAX_DELAY);
 			xQueueReceive(xQueueReadWood, &wood, portMAX_DELAY);
+			unsigned int uiSawSpeed = (wood.sawSpeed * 4096) / 100;
+			xQueueSend(xQueueSawSpeed, &uiSawSpeed, portMAX_DELAY);
 			sChoice = "";
 			xStateMachine.next(xStateActive);
 		}
@@ -147,7 +178,6 @@ void xStateWoodSel()
 				xQueueSend(xQueueRequestWood, &(wood.code), portMAX_DELAY);
 				xQueueReceive(xQueueReadWood, &wood, portMAX_DELAY);
 			}
-			wood.code = sChoice.toInt();
 			sChoice = (uiMode == 4) ? String(wood.sawSpeed) : "";
 			xStateMachine.next(xStateEditSawSpeed);
 		}
@@ -177,7 +207,7 @@ void xStateEditSawSpeed()
 	{
 		if (sChoice.toInt() > 100) sChoice = "100";
 		wood.sawSpeed = sChoice.toInt();
-		sChoice = (uiMode == 4) ? String(wood.feedRate) : "";
+		sChoice = (uiMode == 4) ? String(wood.feedRate, 0) : "";
 		xStateMachine.next(xStateEditFeedRate);
 	}
 	else if (cChoice >= '0' && cChoice <= '9' && sChoice.length() < 3)
@@ -206,6 +236,7 @@ void xStateEditFeedRate()
 		if (sChoice.toInt() > 300) sChoice = "300";
 		wood.feedRate = sChoice.toInt();
 		xQueueSend(xQueueWriteWood, &wood, portMAX_DELAY);
+		xSemaphoreTake(xSemaphoreLog, portMAX_DELAY);
 		sChoice = "";
 		xStateMachine.next(xStateModeSel);
 	}
@@ -219,8 +250,9 @@ void xStateEditFeedRate()
 void xStateActive()
 {
 	vSendLog(INFO, "Menu: Executed xStateActive");
+	int flag = uiMode - 2; // -1 = Mode opération, 0 = Mode apprentissage
 	unsigned int zero = 0;
-	xQueueSend(xQueueApprentissageControl, &zero, portMAX_DELAY); // Arrêter la lecture de la distance
+	xQueueSend(xQueueApprentissageControl, &flag, portMAX_DELAY); // Arrêter la lecture de la distance
 	xQueueSend(xQueueSawSpeed, &zero, portMAX_DELAY); // Arrêter la scie
 	xStateMachine.next(xStateModeSel);
 }
@@ -237,24 +269,24 @@ void vUpdateScreen()
 	}
 	else if (xStateMachine.isInState(xStateWoodSel))
 	{
-		vSendLCDCommand("==   Input WOOD   ==", 0, 0);
-		vSendLCDCommand("WOOD ID + WOOD NUM:", 1, 0);
-		vSendLCDCommand((sChoice == "") ? "                    " : sChoice, 2, 0);
-		vSendLCDCommand("Press * to confirm ", 3, 0);
+		vSendLCDCommand("== Choix du Bois ==", 0, 0);
+		vSendLCDCommand("ID suivi du Numero:", 1, 0);
+		vSendLCDCommand((sChoice == "") ? "                   " : sChoice, 2, 0);
+		vSendLCDCommand("\"*\" Pour confirmer ", 3, 0);
 	}
 	else if (xStateMachine.isInState(xStateEditSawSpeed))
 	{
-		vSendLCDCommand((uiMode == 3) ? "==  MODE MANUEL   ==" : "== MODE MODIFIER  ==", 0, 0);
-		vSendLCDCommand("Input SAW SPEED    ", 1, 0);
-		vSendLCDCommand((sChoice == "") ? "                    " : sChoice, 2, 0);
-		vSendLCDCommand("Press * to confirm ", 3, 0);
+		vSendLCDCommand((uiMode == 3) ? "==  MODE MANUEL  ==" : "== MODE MODIFIER ==", 0, 0);
+		vSendLCDCommand("Vitesse de la Scie:", 1, 0);
+		vSendLCDCommand((sChoice == "") ? "                   " : sChoice, 2, 0);
+		vSendLCDCommand("\"*\" Pour confirmer ", 3, 0);
 	}
 	else if (xStateMachine.isInState(xStateEditFeedRate))
 	{
 		vSendLCDCommand((uiMode == 3) ? "==  MODE MANUEL  ==" : "== MODE MODIFIER ==", 0, 0);
-		vSendLCDCommand("Input FEED RATE    ", 1, 0);
-		vSendLCDCommand((sChoice == "") ? "                    " : sChoice, 2, 0);
-		vSendLCDCommand("Press * to confirm ", 3, 0);
+		vSendLCDCommand("Vitesse du Bois:   ", 1, 0);
+		vSendLCDCommand((sChoice == "") ? "                   " : sChoice, 2, 0);
+		vSendLCDCommand("\"*\" Pour confirmer ", 3, 0);
 	}
 	else if (xStateMachine.isInState(xStateActive))
 	{
@@ -265,9 +297,9 @@ void vUpdateScreen()
 	}
 	else if (xStateMachine.isInState(xStateAdminMode))
 	{
-		vSendLCDCommand("==   ADMIN MODE   ==", 0, 0);
-		vSendLCDCommand("1. Dump logs      ", 1, 0);
-		vSendLCDCommand("2.                ", 2, 0);
-		vSendLCDCommand("3.                ", 3, 0);
+		vSendLCDCommand("==   MODE ADMIN  ==", 0, 0);
+		vSendLCDCommand("1. Journalisation  ", 1, 0);
+		vSendLCDCommand("2. Remise a zero   ", 2, 0);
+		vSendLCDCommand("3.                 ", 3, 0);
 	}
 }

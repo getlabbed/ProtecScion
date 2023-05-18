@@ -10,6 +10,7 @@
 #include <freertos/timers.h>
 #include <esp_task_wdt.h>
 #include "SPIFFS.h"
+#include <Wire.h>
 
 /*/ ------------------ ALL PINS ------------------ ///
 *
@@ -30,31 +31,31 @@ INPUT ONLY *	GPIO 36 A4		:		""			|		GPIO 12				:		!!!NOCONNECT!!!
 
 /// --------- CONFIGURATION --------- ///
 // Tâches
-#define TASK_STACK_SIZE 7000
+#define TASK_STACK_SIZE 10000
 // AsservissementScie
-#define TASK_ASSERVISSEMENTSCIE_PRIORITY 3
-#define TASK_ASSERVISSEMENTSCIE_CORE 0 // La tâche d'asservissement occupe à elle seule le coeur 0
+#define TASK_ASSERVISSEMENTSCIE_PRIORITY 10
+#define TASK_ASSERVISSEMENTSCIE_CORE 1 // La tâche d'asservissement occupe à elle seule le coeur 0
 // IOFlash
-#define TASK_IOFLASH_PRIORITY 4
+#define TASK_IOFLASH_PRIORITY 6
 #define TASK_IOFLASH_CORE 0
 // SoundSensor
 #define TASK_SOUNDSENSOR_PRIORITY 3
-#define TASK_SOUNDSENSOR_CORE 1
+#define TASK_SOUNDSENSOR_CORE 0
 // Mode Apprentissage
-#define TASK_APPRENTISSAGE_PRIORITY 2
-#define TASK_APPRENTISSAGE_CORE 0
+#define TASK_APPRENTISSAGE_PRIORITY 9
+#define TASK_APPRENTISSAGE_CORE 1
 // LCD
-#define TASK_LCD_PRIORITY 6
-#define TASK_LCD_CORE 1
+#define TASK_LCD_PRIORITY 7
+#define TASK_LCD_CORE 0
 // DHT11
 #define TASK_DHT11_PRIORITY 4
-#define TASK_DHT11_CORE 1
+#define TASK_DHT11_CORE 0
 // Menu
 #define TASK_MENU_PRIORITY 5
-#define TASK_MENU_CORE 1
+#define TASK_MENU_CORE 0
 // Keypad
 #define TASK_KEYPAD_PRIORITY 5
-#define TASK_KEYPAD_CORE 1
+#define TASK_KEYPAD_CORE 0
 // LED
 #define TASK_LED_PRIORITY 1
 #define TASK_LED_CORE 0
@@ -88,8 +89,12 @@ extern TaskHandle_t xTaskLED;
 extern SemaphoreHandle_t xSemaphoreSerial;
 // SPI
 extern SemaphoreHandle_t xSemaphoreSPI;
+// I2C
+extern SemaphoreHandle_t xSemaphoreI2C;
 // LCD
-extern SemaphoreHandle_t xSemaphoreLCD;
+extern SemaphoreHandle_t xSemaphoreLCDCommand;
+// LOG
+extern SemaphoreHandle_t xSemaphoreLog;
 
 /// --------- FILES --------- ///
 // IO de bois
@@ -102,16 +107,24 @@ extern QueueHandle_t xQueueLog;
 extern QueueHandle_t xQueueSawSpeed;
 // LCD
 extern QueueHandle_t xQueueLCD;
-//Capteur DHT11
-extern QueueHandle_t xQueueAmbiantHumidity;
-extern QueueHandle_t xQueueAmbiantTemperature;
-extern QueueHandle_t xQueueHeatIndex;
 // Boutons du keypad
 extern QueueHandle_t xQueueKeypad;
 // Mode Apprentissage
 extern QueueHandle_t xQueueApprentissageControl;
+// Son, Temperature Ambiante, Humidité Ambiante, Temperature du bois
+extern QueueHandle_t xQueueSound;
+extern QueueHandle_t xQueueAmbiant;
+extern QueueHandle_t xQueueWoodTemp;
 // LED
 extern QueueHandle_t xQueueLED;
+
+/// --------- I2C --------- ///
+// Pins
+#define PIN_SDA 23
+#define PIN_SCL 22
+
+// I2C
+extern TwoWire xWireBus;
 
 /// --------- TYPES --------- ///
 // Structure de données pour le bois
@@ -139,7 +152,7 @@ typedef struct __attribute__((packed))
 } Log_t;
 
 // Structure de données pour une commande LCD
-typedef struct //__attribute__((packed))
+typedef struct __attribute__((packed))
 {
 	String message; // max 20 caractères
 	unsigned int line;

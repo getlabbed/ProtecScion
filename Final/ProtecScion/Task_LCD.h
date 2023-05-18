@@ -1,9 +1,9 @@
 
 #include "global.h"
 
-#define PIN_DATA 15
-#define PIN_CLOCK 32
-#define PIN_LATCH 14
+// Adresse I2C de l'écran ACL
+#define LCD_I2C_ADDR 0x20
+
 
 // Déclarations des tâches
 void vTaskLCD(void *pvParameters);

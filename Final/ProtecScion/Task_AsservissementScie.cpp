@@ -86,13 +86,13 @@ void vTaskAsservissementScie(void *pvParameters) {
 
 bool bIsFastChange(double input, int threshold)
 {
-  // only check every 100ms
-  if (millis() - lastOutput < 20)
-  {
-    return false;
-  }
+  // // only check every 100ms
+  // if (millis() - lastOutput < 20)
+  // {
+  //   return false;
+  // }
   
-  lastOutput = millis();
+  // lastOutput = millis();
 
   bool result = false;
   for (int i = 0; i < 9; i++)
@@ -120,6 +120,11 @@ bool bIsFastChange(double input, int threshold)
     sumLast += lastInputs[i];
   }
   sumLast /= 4;
+
+  // Serial.print("sum: ");
+  // Serial.print(sum);
+  // Serial.print(" sumLast: ");
+  // Serial.println(sumLast);
 
   return abs(sumLast - sum) > threshold;
 }

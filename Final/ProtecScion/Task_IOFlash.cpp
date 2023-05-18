@@ -10,7 +10,16 @@ void vTaskIOFlash(void *pvParameters)
 	Log_t message;
 	unsigned int uiRequestWoodID;
 
-	writeEmptyFile();
+	File file = SPIFFS.open("/wood.json", FILE_READ);
+	if (!file || file.size() == 0)
+	{
+		file.close();
+		writeEmptyFile();
+	}
+	else
+	{
+		file.close();
+	}
 
 	while (1)
 	{
@@ -25,6 +34,7 @@ void vTaskIOFlash(void *pvParameters)
 		{
 
 			writeWood(wood.code, wood.sawSpeed, wood.feedRate);
+			xSemaphoreGive(xSemaphoreLog);
 		}
 
 		if (xQueueReceive(xQueueLog, &message, 0) == pdTRUE)
@@ -37,10 +47,12 @@ void vTaskIOFlash(void *pvParameters)
 			if (message.level == DUMP)
 			{
 				dumpLog();
-				vDumpWood();
+				vDumpWood(message.message == "PURGE");
+				xSemaphoreGive(xSemaphoreLog);
 				continue;
 			}
 			logMessage(message);
+			xSemaphoreGive(xSemaphoreLog);
 		}
 
 		vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -56,23 +68,6 @@ void writeEmptyFile()
 	}
 
 	File file = SPIFFS.open("/wood.json", "w");
-	if (!file)
-	{
-		xSemaphoreGive(xSemaphoreSPI);
-		vTaskDelay(10 / portTICK_PERIOD_MS);
-		logMessage(Log_t{ERROR, "WRITE_FILE: Failed to create file"});
-		return;
-	}
-
-	// if the file already contains data, return
-	if (file.size() > 0)
-	{
-		file.close();
-		xSemaphoreGive(xSemaphoreSPI);
-		vTaskDelay(10 / portTICK_PERIOD_MS);
-		logMessage(Log_t{INFO, "WRITE_FILE: File already contains data"});
-		return;
-	}
 
 	if (file.print("{}"))
 	{
@@ -270,7 +265,9 @@ void dumpLog()
 	// read the file line by line
 	while (file.available())
 	{
-		Serial.write(file.read());
+		xSemaphoreTake(xSemaphoreSerial, portMAX_DELAY);
+		Serial.println(file.readStringUntil('\n'));
+		xSemaphoreGive(xSemaphoreSerial);
 	}
 	file.close();
 
@@ -279,7 +276,7 @@ void dumpLog()
 	xSemaphoreGive(xSemaphoreSPI);
 }
 
-void vDumpWood()
+void vDumpWood(bool bPurge)
 {
 	if (xSemaphoreTake(xSemaphoreSPI, portMAX_DELAY) == pdFAIL)
 	{
@@ -297,9 +294,18 @@ void vDumpWood()
 	// read the file line by line
 	while (file.available())
 	{
+		xSemaphoreTake(xSemaphoreSerial, portMAX_DELAY);
 		Serial.write(file.read());
+		xSemaphoreGive(xSemaphoreSerial);
 	}
 	file.close();
+
+	if (bPurge)
+	{
+		// delete the file
+		SPIFFS.remove("/wood.json");
+		ESP.restart();
+	}
 	vTaskDelay(10 / portTICK_PERIOD_MS);
 	xSemaphoreGive(xSemaphoreSPI);
 }

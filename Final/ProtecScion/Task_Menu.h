@@ -11,7 +11,7 @@
 
 #include "global.h"
 
-typedef enum {MODE_SEL, WOOD_SEL, EDIT_SAW_SPEED, EDIT_FEED_RATE, ACTIVE} MenuState_t;
+#define ADMIN_PASSWORD "1337"
 
 void vTaskMenu(void *pvParameters);
 void vUpdateScreen();
@@ -20,3 +20,5 @@ void xStateWoodSel();
 void xStateEditSawSpeed();
 void xStateEditFeedRate();
 void xStateActive();
+void xStateAdminMode();
+void xStateAdminPassword();

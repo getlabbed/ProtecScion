@@ -40,7 +40,9 @@ TaskHandle_t xTaskLED;
 // define semaphores
 SemaphoreHandle_t xSemaphoreSerial;
 SemaphoreHandle_t xSemaphoreSPI;
-SemaphoreHandle_t xSemaphoreLCD;
+SemaphoreHandle_t xSemaphoreI2C;
+SemaphoreHandle_t xSemaphoreLCDCommand;
+SemaphoreHandle_t xSemaphoreLog;
 
 // define queues
 QueueHandle_t xQueueReadWood;
@@ -52,46 +54,54 @@ QueueHandle_t xQueueLCD;
 QueueHandle_t xQueueAmbiantHumidity;
 QueueHandle_t xQueueAmbiantTemperature;
 QueueHandle_t xQueueHeatIndex;
-QueueHandle_t xQueueKeypad; 
+QueueHandle_t xQueueKeypad;
 QueueHandle_t xQueueApprentissageControl;
+QueueHandle_t xQueueSound;
+QueueHandle_t xQueueAmbiant;
+QueueHandle_t xQueueWoodTemp;
 QueueHandle_t xQueueLED;
 QueueHandle_t xQueueAverageFeedRate;
 
+// I2C
+TwoWire xWireBus = TwoWire(0);
+
 /// --------- FONCTIONS --------- ///
 
-/** 
+/**
  * @fn vSendLCDCommand
  * @brief Simplifier l'écriture de la commande d'écriture sur l'écran ACL
- * 
+ *
  * @author Yanick Labelle @date 09-05-2023
  */
-void vSendLCDCommand( String message, unsigned int line, unsigned int duration)
+void vSendLCDCommand(String message, unsigned int line, unsigned int duration)
 {
   LCDCommand_t cmdBuffer = {message, line, duration};
   xQueueSend(xQueueLCD, &cmdBuffer, portMAX_DELAY);
   vTaskDelay(pdMS_TO_TICKS(10));
+  xSemaphoreTake(xSemaphoreLCDCommand, portMAX_DELAY);
 }
 
-/** 
+/**
  * @fn vSendLCDCommand
  * @brief Simplifier l'écriture de la commande de log
- * 
+ *
  * @author Yanick Labelle @date 09-05-2023
  */
 void vSendLog(LogLevel_t level, String message)
 {
   Log_t logBuffer = {level, message};
   xQueueSend(xQueueLog, &logBuffer, portMAX_DELAY);
+  xSemaphoreTake(xSemaphoreLog, portMAX_DELAY);
 }
-
 
 /**
  * @fn vCreateAllTasks
  * @brief Création des tâches
- * 
+ *
  * @author Olivier David Laplante @date 30-04-2023
  */
-void vCreateAllTasks() {
+void vCreateAllTasks()
+{
   xTaskCreatePinnedToCore(vTaskAsservissementScie, "AsservissementScie", TASK_STACK_SIZE, NULL, TASK_ASSERVISSEMENTSCIE_PRIORITY, &xTaskAsservissementScie, TASK_ASSERVISSEMENTSCIE_CORE);
   xTaskCreatePinnedToCore(vTaskIOFlash, "IOFlash", TASK_STACK_SIZE, NULL, TASK_IOFLASH_PRIORITY, &xTaskIOFlash, TASK_IOFLASH_CORE);
   xTaskCreatePinnedToCore(vTaskSoundSensor, "SoundSensor", TASK_STACK_SIZE, NULL, TASK_SOUNDSENSOR_PRIORITY, &xTaskSoundSensor, TASK_SOUNDSENSOR_CORE);
@@ -103,29 +113,33 @@ void vCreateAllTasks() {
   xTaskCreatePinnedToCore(vTaskLED, "LED", TASK_STACK_SIZE, NULL, TASK_LED_PRIORITY, &xTaskLED, TASK_LED_CORE);
 }
 
-/** 
+/**
  * @fn vSetupSemaphores
  * @brief Création des sémaphores
- * 
+ *
  * @author Olivier David Laplante @date 06-05-2023
  */
-void vSetupSemaphores() {
+void vSetupSemaphores()
+{
   xSemaphoreSerial = xSemaphoreCreateBinary();
   xSemaphoreSPI = xSemaphoreCreateBinary();
-  xSemaphoreLCD = xSemaphoreCreateBinary();
+  xSemaphoreI2C = xSemaphoreCreateBinary();
+  xSemaphoreLCDCommand = xSemaphoreCreateBinary();
+  xSemaphoreLog = xSemaphoreCreateBinary();
 
   xSemaphoreGive(xSemaphoreSerial);
   xSemaphoreGive(xSemaphoreSPI);
-  xSemaphoreGive(xSemaphoreLCD);
+  xSemaphoreGive(xSemaphoreI2C);
 }
 
-/** 
+/**
  * @fn vSetupQueues
  * @brief Création des files
- * 
+ *
  * @author Olivier David Laplante @date 06-05-2023
  */
-void vSetupQueues() {
+void vSetupQueues()
+{
   xQueueReadWood = xQueueCreate(1, sizeof(Wood_t));
   xQueueWriteWood = xQueueCreate(1, sizeof(Wood_t));
   xQueueLog = xQueueCreate(100, sizeof(Log_t));
@@ -136,7 +150,10 @@ void vSetupQueues() {
   xQueueAmbiantTemperature = xQueueCreate(1, sizeof(float));
   xQueueKeypad = xQueueCreate(10, sizeof(char));
   xQueueLED = xQueueCreate(1, sizeof(LedState_t));
-  xQueueApprentissageControl = xQueueCreate(1, sizeof(unsigned int));
+  xQueueApprentissageControl = xQueueCreate(1, sizeof(int));
+  xQueueSound = xQueueCreate(1, sizeof(unsigned int));
+  xQueueAmbiant = xQueueCreate(1, sizeof(unsigned int));
+  xQueueWoodTemp = xQueueCreate(1, sizeof(unsigned int));
 }
 
 /// --------- SETUP & LOOP --------- ///
@@ -154,22 +171,27 @@ void vSetupQueues() {
  * Historique :
  *  @date 2023-04-30 @author Olivier David Laplante - Entrée initiale du code.
  */
-void setup() {
+void setup()
+{
   // setup serial
   Serial.begin(115200);
-  
+
   // setup SPIFFS
-  if (!SPIFFS.begin(true)) {
+  if (!SPIFFS.begin(true))
+  {
     Serial.println("An Error has occurred while mounting SPIFFS");
     return;
   }
+
+  // setup I2C
+  xWireBus.begin(PIN_SDA, PIN_SCL);
 
   // setup semaphores
   vSetupSemaphores();
 
   // setup queues
   vSetupQueues();
-  
+
   // setup tasks
   vCreateAllTasks();
 
@@ -192,5 +214,6 @@ void setup() {
  * Historique :
  *  @date 2023-04-30 Olivier David Laplante - Entrée initiale du code.
  */
-void loop() {
+void loop()
+{
 }

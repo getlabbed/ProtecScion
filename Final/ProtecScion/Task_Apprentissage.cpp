@@ -10,6 +10,7 @@
  */
 
 #include "Task_Apprentissage.h"
+#include "Task_AsservissementScie.h"
 #include <Filters.h>
 
 void vTaskApprentissage(void *pvParameters)
@@ -39,7 +40,9 @@ void vTaskApprentissage(void *pvParameters)
 
 	pinMode(PIN_IR_SENSOR, INPUT);
 
-	unsigned int controlFlag = 1;
+	int controlFlag = 1;
+
+	unsigned long prevTime2 = 0;
 
 	while (true)
 	{
@@ -89,7 +92,7 @@ void vTaskApprentissage(void *pvParameters)
 						speedSum = 0;
 						speedCount = 0;
 					}
-					sawSpeedSum += analogRead(PIN_IR_SENSOR);
+					sawSpeedSum += analogRead(PIN_SENSE);
 					sawSpeedCount++;
 				}
 			}
@@ -98,15 +101,24 @@ void vTaskApprentissage(void *pvParameters)
 			prevDistance = currDistance;
 			prevTime = currTime;
 
+			// Update data on the screen
+			if (millis() - prevTime2 >= 500)
+			{
+				prevTime2 = millis();
+				xQueueSend(xQueueSound, &(wood.code), 0);
+				xQueueSend(xQueueAmbiant, &(wood.code), 0);
+			}
+
 			// Délai de 50ms pour assurer la stabilité du capteur
 			vTaskDelay(50 / portTICK_PERIOD_MS);
 
 			if (!xQueueReceive(xQueueApprentissageControl, &controlFlag, 0)) continue;
+			if (controlFlag == -1) break;
 			float avgSawSpeed = sawSpeedSum / sawSpeedCount;
 
 			wood.code = wood.code;
 			wood.feedRate = avgFeedRate;
-			wood.sawSpeed = avgSawSpeed;
+			wood.sawSpeed = (avgSawSpeed * 100) / 4095;
       vSendLog(INFO, "IR: Saw Speed: " + String(avgSawSpeed) + " units/s");
       vSendLog(INFO, "IR: Feed Rate: " + String(avgFeedRate) + " units/s");
 
