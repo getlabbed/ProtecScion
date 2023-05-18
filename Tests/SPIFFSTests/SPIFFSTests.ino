@@ -10,9 +10,9 @@
 typedef struct
 {
 	char name[16]; // nom du bois
-	int code;			 // code du bois
-	int sawSpeed;	 // vitesse de la lame
-	int feedRate;	 // vitesse d'avancement
+	int code;	   // code du bois
+	int sawSpeed;  // vitesse de la lame
+	int feedRate;  // vitesse d'avancement
 } Wood_t;
 
 // Types de bois disponibles

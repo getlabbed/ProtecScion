@@ -1,21 +1,21 @@
 /**
- * Nom du fichier :
- *  @name ProtecScion.ino
- * Description :
- *  @brief Programme permettant d'améliorer la fonctionnalité d'un banc de scie.
- * restrictions:
- *  Pour type de carte ESP32 Feather
- * Historique :
- *  @date 2023-04-30 @author Olivier David Laplante @author Yanick Labelle - Entrée initiale du code.
- *  @note Utilisation de Doxygen pour la documentation:
- *         https://www.doxygen.nl/manual/docblocks.html
+ * @file ProtecScion.ino
+ * @author Olivier David Laplante (skkeye@gmail.com)
+ * @author Yanick Labelle (getlabbed@proton.me)
+ * @brief Programme permettant d'améliorer la fonctionnalité d'un banc de scie.
+ * @note restrictions: Pour type de carte ESP32 Feather
+ * @version 1.0
+ * @date 2023-04-30 - Entrée initiale du code
+ * @date 2023-05-18 - Entrée finale du code 
+ * @note Utilisation de Doxygen pour la documentation:
+ *       https://www.doxygen.nl/manual/docblocks.html
  */
 
 /// --------- INCLUDES --------- ///
 #include "global.h"
 
 /// --------- TASKS --------- ///
-// include tasks
+// Inclusion des tâches
 #include "Task_AsservissementScie.h"
 #include "Task_IOFlash.h"
 #include "Task_SoundSensor.h"
@@ -26,7 +26,7 @@
 #include "Task_Keypad.h"
 #include "Task_LED.h"
 
-// define handles
+// Définition des handles
 TaskHandle_t xTaskAsservissementScie;
 TaskHandle_t xTaskIOFlash;
 TaskHandle_t xTaskSoundSensor;
@@ -37,14 +37,14 @@ TaskHandle_t xTaskMenu;
 TaskHandle_t xTaskKeypad;
 TaskHandle_t xTaskLED;
 
-// define semaphores
+// Définition des sémaphores
 SemaphoreHandle_t xSemaphoreSerial;
 SemaphoreHandle_t xSemaphoreSPI;
 SemaphoreHandle_t xSemaphoreI2C;
 SemaphoreHandle_t xSemaphoreLCDCommand;
 SemaphoreHandle_t xSemaphoreLog;
 
-// define queues
+// Définition des files
 QueueHandle_t xQueueReadWood;
 QueueHandle_t xQueueWriteWood;
 QueueHandle_t xQueueRequestWood;
@@ -68,38 +68,40 @@ TwoWire xWireBus = TwoWire(0);
 /// --------- FONCTIONS --------- ///
 
 /**
- * @fn vSendLCDCommand
- * @brief Simplifier l'écriture de la commande d'écriture sur l'écran ACL
- *
- * @author Yanick Labelle @date 09-05-2023
+ * @brief Simplifier l'impression sur l'écran LCD
+ * @author Yanick Labelle (getlabbed@proton.me)
+ * 
+ * @param message - Message à afficher
+ * @param line - Ligne à afficher
+ * @param duration - Durée d'affichage (0 = infini)
  */
 void vSendLCDCommand(String message, unsigned int line, unsigned int duration)
 {
   LCDCommand_t cmdBuffer = {message, line, duration};
-  xQueueSend(xQueueLCD, &cmdBuffer, portMAX_DELAY);
+  xQueueSend(xQueueLCD, &cmdBuffer, portMAX_DELAY);   // Envoyer le message à écrire dans la file de l'écran LCD
   vTaskDelay(pdMS_TO_TICKS(10));
-  xSemaphoreTake(xSemaphoreLCDCommand, portMAX_DELAY);
+  xSemaphoreTake(xSemaphoreLCDCommand, portMAX_DELAY); // Assurer une synchronisation de l'écran LCD
 }
 
 /**
- * @fn vSendLCDCommand
  * @brief Simplifier l'écriture de la commande de log
- *
- * @author Yanick Labelle @date 09-05-2023
+ * @author Yanick Labelle (getlabbed@proton.me)
+ * 
+ * @param level - Niveau du message à journaliser
+ * @param message - Message à journaliser
  */
 void vSendLog(LogLevel_t level, String message)
 {
   Log_t logBuffer = {level, message};
-  xQueueSend(xQueueLog, &logBuffer, portMAX_DELAY);
-  xSemaphoreTake(xSemaphoreLog, portMAX_DELAY);
+  xQueueSend(xQueueLog, &logBuffer, portMAX_DELAY); // Envoyer le message à journaliser dans la file correspondante
+  xSemaphoreTake(xSemaphoreLog, portMAX_DELAY); // Assurer une synchronisation des messages de journalisation
 }
-
-/**
- * @fn vCreateAllTasks
- * @brief Création des tâches
- *
- * @author Olivier David Laplante @date 30-04-2023
- */
+ 
+ /**
+  * @brief Création des tâches 
+  *
+  * @author Olivier David Laplante
+  */
 void vCreateAllTasks()
 {
   xTaskCreatePinnedToCore(vTaskAsservissementScie, "AsservissementScie", TASK_STACK_SIZE, NULL, TASK_ASSERVISSEMENTSCIE_PRIORITY, &xTaskAsservissementScie, TASK_ASSERVISSEMENTSCIE_CORE);
@@ -114,10 +116,9 @@ void vCreateAllTasks()
 }
 
 /**
- * @fn vSetupSemaphores
  * @brief Création des sémaphores
- *
- * @author Olivier David Laplante @date 06-05-2023
+ * 
+ * @author Olivier David Laplante
  */
 void vSetupSemaphores()
 {
@@ -133,10 +134,9 @@ void vSetupSemaphores()
 }
 
 /**
- * @fn vSetupQueues
  * @brief Création des files
- *
- * @author Olivier David Laplante @date 06-05-2023
+ * 
+ * @author Olivier David Laplante
  */
 void vSetupQueues()
 {
@@ -157,19 +157,11 @@ void vSetupQueues()
 }
 
 /// --------- SETUP & LOOP --------- ///
+
 /**
- * Nom de la fonction :
- *  @name setup
- * Description de la fonction :
- *  @brief Fonction d'initialisation du programme.
- *
- * Valeur de retour :
- *  @return void
- * Note(s) :
- *  @note Aucune
- *
- * Historique :
- *  @date 2023-04-30 @author Olivier David Laplante - Entrée initiale du code.
+ * @brief Fonction d'initialisation du programme.
+ * 
+ * @author Olivier David Laplante
  */
 void setup()
 {
@@ -201,18 +193,9 @@ void setup()
 }
 
 /**
- * Nom de la fonction :
- *  @name loop
- * Description de la fonction :
- *  @brief Fonction de boucle principale du programme.
- *
- * Valeur de retour :
- *  @return void
- * Note(s) :
- *  @note Aucune
- *
- * Historique :
- *  @date 2023-04-30 Olivier David Laplante - Entrée initiale du code.
+ * @brief Fonction de boucle principale du programme.
+ * @note Non utilisée, car les tâches sont gérées par le RTOS.
+ * 
  */
 void loop()
 {

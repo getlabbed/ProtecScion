@@ -1,3 +1,13 @@
+/**
+ * @file Task_AsservissementScie.h
+ * @author Olivier David Laplante (skkeye@gmail.com)
+ * @brief Fichier d'en-tête du fichier Task_AsservissementScie.cpp
+ * @note restrictions: Pour type de carte ESP32 Feather
+ * @version 1.0
+ * @date 2023-04-30 - Entrée initiale du code
+ * @date 2023-05-18 - Entrée finale du code
+ * 
+ */
 
 #include "global.h"
 
@@ -28,4 +38,4 @@ typedef enum {OFF, INIT, STARTING, RUNNING} MotorState_t;
 
 // Declaration des fonctions
 void vTaskAsservissementScie(void *pvParameters);
-bool bIsFastChange(double input, int threshold);
+bool bIsFastChange(double input, int iThreshold);

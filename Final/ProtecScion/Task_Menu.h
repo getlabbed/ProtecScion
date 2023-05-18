@@ -1,12 +1,12 @@
-/**
- * Nom du fichier :
- *  @name Task_Menu.h
- * Description :
- *  @brief Fichier d'en-tête du fichier Task_Menu.cpp.
- * restrictions:
- *  Pour type de carte ESP32 Feather
- * Historique :
- *  @date 2023-05-13 @author Olivier David Laplante - Entrée initiale du code.
+ /**
+ * @file Task_Menu.h
+ * @author Olivier David Laplante (skkeye@gmail.com)
+ * @brief Fichier d'en-tête du fichier Task_Menu.cpp.
+ * @note restrictions: Pour type de carte ESP32 Feather
+ * @version 1.0
+ * @date 2023-05-13 - Entrée initiale du code
+ * @date 2023-05-18 - Entrée finale du code 
+ * 
  */
 
 #include "global.h"
