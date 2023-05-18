@@ -1,7 +1,20 @@
+/**
+ * @file global.h
+ * @author Olivier David Laplante (skkeye@gmail.com)
+ * @author Yanick Labelle (getlabbed@proton.me)
+ * @brief Ce fichier contient les variables globales du projet, les priorités des tâches
+ * 				ainsi que les configurations de FreeRTOS.
+ * @version 1.0
+ * @date 2023-03-16 - Entrée initiale du code
+ * @date 2023-05-18 - Entrée finale du code
+ * 
+ */
 
+// Empêche les inclusions multiples
 #ifndef GLOBAL_H
 #define GLOBAL_H
 
+// --------- INCLUDES --------- ///
 #include <Arduino.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -11,6 +24,8 @@
 #include <esp_task_wdt.h>
 #include "SPIFFS.h"
 #include <Wire.h>
+
+
 
 /*/ ------------------ ALL PINS ------------------ ///
 *
@@ -154,7 +169,7 @@ typedef struct __attribute__((packed))
 // Structure de données pour une commande LCD
 typedef struct __attribute__((packed))
 {
-	String message; // max 20 caractères
+	String message; // maximum 20 caractères
 	unsigned int line;
 	unsigned int duration; // en ms, 0 pour infini
 } LCDCommand_t;
