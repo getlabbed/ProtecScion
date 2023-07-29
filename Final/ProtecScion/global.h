@@ -1,16 +1,16 @@
 /**
  * @file global.h
- * @author Olivier David Laplante (skkeye@gmail.com)
- * @author Yanick Labelle (getlabbed@proton.me)
- * @brief Ce fichier contient les variables globales du projet, les priorités des tâches
- * 				ainsi que les configurations de FreeRTOS.
+ * @author Skkeye
+ * @author Skkeye's coleague
+ * @brief This file contains the global variables of the project, 
+ * 				the priorities of the tasks and the configuration of FreeRTOS.
  * @version 1.0
- * @date 2023-03-16 - Entrée initiale du code
- * @date 2023-05-18 - Entrée finale du code
+ * @date 2023-03-16 - Initial code entry
+ * @date 2023-05-18 - Final code entry
  * 
  */
 
-// Empêche les inclusions multiples
+// Prevents multiple inclusions
 #ifndef GLOBAL_H
 #define GLOBAL_H
 
@@ -28,37 +28,36 @@
 
 
 /*/ ------------------ ALL PINS ------------------ ///
-*
-*	GPIO 26 A0		:		FBK Moteur
-*	GPIO 25 A1		:		PWM Moteur
-INPUT ONLY *	GPIO 34 A2		:		IR Distance Sensor
-INPUT ONLY *	GPIO 39 A3		:		Sound					|		GPIO 13				:		""
-INPUT ONLY *	GPIO 36 A4		:		""			|		GPIO 12				:		!!!NOCONNECT!!!
-*	GPIO 4  A5		:		KEYPAD				|		GPIO 27				:		LED
-*	GPIO 5 SCK		:		KEYPAD				|		GPIO 33				:		DHT11
-*	GPIO 18 MOSI	:		KEYPAD				|		GPIO 15				:		LCD DAT
-*	GPIO 19 MISO	:		KEYPAD				|		GPIO 32				:		LCD CLK
-*	GPIO 16				:		KEYPAD				|		GPIO 14				:		LCD LAT
-*	GPIO 17				:		KEYPAD				|		GPIO 22 SCL		:		Temp
-*	GPIO 21				:		KEYPAD				|		GPIO 23 SDA		:		Temp
-*/
-// ---------------------------- ///
+            *
+            * GPIO 26 A0    : FBK Motor
+            * GPIO 25 A1    : PWM Motor
+INPUT ONLY  * GPIO 34 A2    : IR Distance Sensor
+INPUT ONLY  * GPIO 39 A3    : Sound   | GPIO 13      : ""
+INPUT ONLY  * GPIO 36 A4    : ""      | GPIO 12      : !!!NOCONNECT!!!
+            * GPIO 4  A5    : KEYPAD  | GPIO 27      : LED
+            * GPIO 5 SCK    : KEYPAD  | GPIO 33      : DHT11
+            * GPIO 18 MOSI  : KEYPAD  | GPIO 15      : LCD DAT
+            * GPIO 19 MISO  : KEYPAD  | GPIO 32      : LCD CLK
+            * GPIO 16       : KEYPAD  | GPIO 14      : LCD LAT
+            * GPIO 17       : KEYPAD  | GPIO 22 SCL  : Temp
+            * GPIO 21       : KEYPAD  | GPIO 23 SDA  : Temp
+*/// --------------------------------------------- ///
 
 /// --------- CONFIGURATION --------- ///
-// Tâches
+// Tasks
 #define TASK_STACK_SIZE 10000
-// AsservissementScie
-#define TASK_ASSERVISSEMENTSCIE_PRIORITY 10
-#define TASK_ASSERVISSEMENTSCIE_CORE 1 // La tâche d'asservissement occupe à elle seule le coeur 0
+// SawServo
+#define TASK_SAWSERVO_PRIORITY 10
+#define TASK_SAWSERVO_CORE 1 // The servo task occupies core 1 alone
 // IOFlash
 #define TASK_IOFLASH_PRIORITY 6
 #define TASK_IOFLASH_CORE 0
 // SoundSensor
 #define TASK_SOUNDSENSOR_PRIORITY 3
 #define TASK_SOUNDSENSOR_CORE 0
-// Mode Apprentissage
-#define TASK_APPRENTISSAGE_PRIORITY 9
-#define TASK_APPRENTISSAGE_CORE 1
+// Learning mode
+#define TASK_LEARNING_PRIORITY 9
+#define TASK_LEARNING_CORE 1
 // LCD
 #define TASK_LCD_PRIORITY 7
 #define TASK_LCD_CORE 0
@@ -75,19 +74,19 @@ INPUT ONLY *	GPIO 36 A4		:		""			|		GPIO 12				:		!!!NOCONNECT!!!
 #define TASK_LED_PRIORITY 1
 #define TASK_LED_CORE 0
 
-// Niveaux de log
+// Log level
 #define DEBUG 2 // 0: INFO, 1: WARNING, 2: ERROR, 3: OFF
 
 /// --------- HANDLES --------- ///
-/// --------- TACHES --------- ///
-// AsservissementScie
-extern TaskHandle_t xTaskAsservissementScie;
+/// --------- TASKS --------- ///
+// SawServo
+extern TaskHandle_t xTaskSawServo;
 // IOFlash
 extern TaskHandle_t xTaskIOFlash;
 // SoundSensor
 extern TaskHandle_t xTaskSoundSensor;
-// SonarSensor
-extern TaskHandle_t xTaskApprentissage;
+// Learning mode
+extern TaskHandle_t xTaskLearning;
 // LCD
 extern TaskHandle_t xTaskLCD;
 // DHT11
@@ -112,21 +111,21 @@ extern SemaphoreHandle_t xSemaphoreLCDCommand;
 extern SemaphoreHandle_t xSemaphoreLog;
 
 /// --------- FILES --------- ///
-// IO de bois
+// Wood IO
 extern QueueHandle_t xQueueReadWood;
 extern QueueHandle_t xQueueWriteWood;
 extern QueueHandle_t xQueueRequestWood;
-// IO de log
+// Log IO
 extern QueueHandle_t xQueueLog;
-// Vitesse de la scie
+// Saw Speed
 extern QueueHandle_t xQueueSawSpeed;
 // LCD
 extern QueueHandle_t xQueueLCD;
-// Boutons du keypad
+// Keypad buttons
 extern QueueHandle_t xQueueKeypad;
-// Mode Apprentissage
-extern QueueHandle_t xQueueApprentissageControl;
-// Son, Temperature Ambiante, Humidité Ambiante, Temperature du bois
+// Learning mode
+extern QueueHandle_t xQueueLearningControl;
+// Sound, Ambiant Temperature, Wood Temperature
 extern QueueHandle_t xQueueSound;
 extern QueueHandle_t xQueueAmbiant;
 extern QueueHandle_t xQueueWoodTemp;
@@ -142,15 +141,15 @@ extern QueueHandle_t xQueueLED;
 extern TwoWire xWireBus;
 
 /// --------- TYPES --------- ///
-// Structure de données pour le bois
+// Data struct for wood
 typedef struct __attribute__((packed))
 {
-	int code;			// code du bois
-	int sawSpeed; // vitesse de la lame
-	float feedRate; // vitesse d'avancement
+	int code;			// wood code
+	int sawSpeed; // Speed of the saw
+	float feedRate; // Speed when feeding wood on the saw (mm/s)
 } Wood_t;
 
-// Enumération pour les niveaux de log
+// Log levels enum
 typedef enum
 {
 	INFO,
@@ -159,25 +158,25 @@ typedef enum
 	DUMP
 } LogLevel_t;
 
-// Structure de données pour les logs
+// Log data struct
 typedef struct __attribute__((packed))
 {
 	LogLevel_t level;
 	String message;
 } Log_t;
 
-// Structure de données pour une commande LCD
+// LCD command data struct
 typedef struct __attribute__((packed))
 {
-	String message; // maximum 20 caractères
+	String message; // maximum 20 char
 	unsigned int line;
-	unsigned int duration; // en ms, 0 pour infini
+	unsigned int duration; // in ms, 0 for infinite
 } LCDCommand_t;
 
-// Structure de données pour les boutons de la LED
+// LED button data struct
 typedef enum {LED_RED, LED_GREEN, LED_BOTH, LED_BLINK, LED_OFF} LedState_t;
 
-/// FONCTIONS GLOBALES ///
+/// Global functions ///
 
 extern void vSendLCDCommand(String message, unsigned int line, unsigned int duration);
 

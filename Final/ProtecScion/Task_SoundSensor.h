@@ -1,11 +1,11 @@
  /**
  * @file Task_SoundSensor.h
- * @author Yanick Labelle (getlabbed@proton.me)
- * @brief File d'en-tête du fichier Task_SoundSensor.cpp.
- * @note restrictions: Pour type de carte ESP32 Feather
+ * @author Skkeye's coleague
+ * @brief Header file for Task_SoundSensor.cpp
+ * @note restrictions: ESP32 Feather board type
  * @version 1.0
- * @date 2023-05-06 - Entrée initiale du code
- * @date 2023-05-18 - Entrée finale du code 
+ * @date 2023-05-06 - Initial code entry
+ * @date 2023-05-18 - Final code entry 
  * 
  */
 
@@ -15,5 +15,5 @@
 #define RESOLUTION 1024
 #define VOLTAGE_REFERENCE 3.3
 
-// Déclaration des tâches
+// Task declaration
 void vTaskSoundSensor(void *pvParameters);

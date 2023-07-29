@@ -1,32 +1,32 @@
 /**
  * @file Task_Apprentissage.h
- * @author Yanick Labelle (getlabbed@proton.me)
- * @brief Fichier d'en-tête du fichier Task_Apprentissage.cpp
- * @note restrictions: Pour type de carte ESP32 Feather
+ * @author Skkeye's coleague
+ * @brief Header file for the Task_Apprentissage.cpp file
+ * @note restrictions: ESP32 Feather board type
  * 
  * @version 1.0
- * @date 2023-04-30 - Entrée initiale du code
- * @date 2023-05-18 - Entrée finale du code 
+ * @date 2023-04-30 - Initial code entry
+ * @date 2023-05-18 - Final code entry
  * 
  */
 
 #include "global.h"
 
-// Broche du capteur de Distance infrarouge SHARP GP2D2F
+// SHARP GP2D2F IR Distance Sensor pin
 #define PIN_IR_SENSOR 34 // A2
 
-// Paramamètres du filtre
+// Filter parameters
 #define FILTER_GAIN 5.0
 
-// limitation de la fDistance
+// fDistance limiting
 #define LOW_LIMIT 0.001
 #define HIGH_LIMIT 300.0
 
-// Temps entre chaque moyenne
+// Averaging interval
 #define AVG_INTERVAL_TIME 30000
 
-// Entêtes de fonctions
+// Function prototypes
 float convertToDistance(int iSensorValue);
 
-// Déclaration des tâches
+// Task declaration
 void vTaskApprentissage(void *pvParameters);

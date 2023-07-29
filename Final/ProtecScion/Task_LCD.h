@@ -1,24 +1,24 @@
 /**
  * @file Task_LCD.cpp
- * @author Olivier David Laplante (skkeye@gmail.com)
- * @brief Fichier d'en-tête du fichier Task_LCD.cpp
- * @note restrictions: Pour type de carte ESP32 Feather
+ * @author Skkeye
+ * @brief Header file of the Task_LCD.cpp file
+ * @note restrictions: ESP32 Feather board type
  * @version 1.0
- * @date 2023-05-07 - Entrée initiale du code
- * @date 2023-05-18 - Entrée finale du code
+ * @date 2023-05-07 - Initial code entry
+ * @date 2023-05-18 - Final code entry
  * 
  */
 
 #include "global.h"
 
-// Adresse I2C de l'écran ACL
+// I2C LCD address
 #define LCD_I2C_ADDR 0x20
 
 
-// Déclarations des tâches
+// Task declaration
 void vTaskLCD(void *pvParameters);
 
-// Déclarations des fonctions
+// Function prototypes
 void setResetLine(unsigned int line, unsigned int duration);
 void resetLine(int line);
 void resetLine0(void*);

@@ -1,12 +1,12 @@
 /**
  * @file Task_IOFlash.cpp
- * @author Olivier David Laplante (skkeye@gmail.com)
- * @author Yanick Labelle (getlabbed@proton.me)
- * @brief Fichier avec fonctionnalités de lecture et écriture de la mémoire flash
- * @note restrictions: Pour type de carte ESP32 Feather
+ * @author Skkeye
+ * @author Skkeye's coleague
+ * @brief Program used to read and write to the flash memory
+ * @note restrictions: ESP32 Feather board type
  * @version 1.0
- * @date 2023-04-30 - Entrée initiale du code
- * @date 2023-05-18 - Entrée finale du code
+ * @date 2023-04-30 - Initial code entry
+ * @date 2023-05-18 - Final code entry
  * 
  */
 
@@ -16,9 +16,9 @@
 #include <ArduinoJson.h>
 
 /**
- * @brief Tache de lecture et écriture de la mémoire flash
+ * @brief Read/Write task of the flash memory
  * 
- * @param pvParameters - Non utilisé
+ * @param pvParameters - Not used
  */
 void vTaskIOFlash(void *pvParameters)
 {
@@ -76,9 +76,9 @@ void vTaskIOFlash(void *pvParameters)
 }
 
 /**
- * @brief Fonction pour écrire un fichier wood.json vierge
+ * @brief Function to write an empty wood.json file
  * 
- * @author Olivier David Laplante (skkeye@gmail.com)
+ * @author Skkeye
  */
 void writeEmptyFile()
 {
@@ -107,11 +107,11 @@ void writeEmptyFile()
 }
 
 /**
- * @brief Fonction pour lire un objet wood dans le fichier wood.json
- * @author Yanick Labelle (getlabbed@proton.me)
+ * @brief Function to read a wood object in the wood.json file
+ * @author Skkeye's coleague
  * 
- * @param xWood - Reference de l'objet wood à lire
- * @param iCode - ID du bois à écrire
+ * @param xWood - Reference to the wood object to write
+ * @param iCode - ID of the wood to read
  */
 void readWood(Wood_t &xWood, int iCode)
 {
@@ -132,9 +132,9 @@ void readWood(Wood_t &xWood, int iCode)
 	vTaskDelay(10 / portTICK_PERIOD_MS);
 	xSemaphoreGive(xSemaphoreSPI);
 
-	if (xFileData.length() > 0) // Si le fichier n'est pas vide
+	if (xFileData.length() > 0) // If the file is not empty
 	{
-		StaticJsonDocument<2048> xDoc; // ajuster la taille du fichier selon la quantité de bois
+		StaticJsonDocument<2048> xDoc; // Adjust the file size according to the amount of wood
 		DeserializationError xError = deserializeJson(xDoc, xFileData);
 
 		if (xError)
@@ -163,12 +163,12 @@ void readWood(Wood_t &xWood, int iCode)
 }
 
 /**
- * @brief Fonction pour écrire un objet wood dans le fichier wood.json
- * @author Yanick Labelle
+ * @brief Function to write a wood object in the wood.json file
+ * @author Skkeye's coleague
  * 
- * @param iCode - ID du bois à écrire
- * @param sawSpeed - Vitesse de la scie
- * @param feedRate - Vitesse d'avancement
+ * @param iCode - ID of the wood to write
+ * @param sawSpeed - Saw speed
+ * @param feedRate - Feed rate
  */
 void writeWood(int iCode, int sawSpeed, int feedRate)
 {
@@ -177,7 +177,7 @@ void writeWood(int iCode, int sawSpeed, int feedRate)
 		logMessage(Log_t{WARNING, "WRITE_WOOD: Could not take SPIFFS semaphore"});
 		return;
 	}
-	// Lire les données du fichier JSON
+	// Read the JSON file data
 	File xFile = SPIFFS.open("/xWood.json", "r");
 	// read the file in a variable
 	String xFileData;
@@ -191,7 +191,7 @@ void writeWood(int iCode, int sawSpeed, int feedRate)
 
 	if (xFileData.length() > 0)
 	{
-		// Ajuster la taille du fichier selon la quantité de bois
+		// Adjust the file size according to the amount of wood
 		StaticJsonDocument<2048> xDoc;
 		DeserializationError error = deserializeJson(xDoc, xFileData);
 
@@ -246,10 +246,10 @@ void writeWood(int iCode, int sawSpeed, int feedRate)
 }
 
 /**
- * @brief Fonction pour écrire un objet log dans le fichier log.txt
- * @author Olivier David Laplante
+ * @brief Function to write a log object in the log.txt file
+ * @author Skkeye
  * 
- * @param xLogMsg - Objet log à écrire
+ * @param xLogMsg - Log object to write
  */
 void logMessage(Log_t xLogMsg)
 {
@@ -265,7 +265,7 @@ void logMessage(Log_t xLogMsg)
 		return;
 	}
 
-	// Regarder si le fichier est plus grand que 100kB
+	// Check if the file is larger than 100kB
 	if (xFile.size() > 100000)
 	{
 		xFile.close();
@@ -290,8 +290,8 @@ void logMessage(Log_t xLogMsg)
 }
 
 /**
- * @brief Fonction pour écrire les logs dans le port sériel
- * @author Olivier David Laplante
+ * @brief Function to write the logs in the serial port
+ * @author Skkeye
  * 
  */
 void dumpLog()
@@ -324,10 +324,10 @@ void dumpLog()
 }
 
 /**
- * @brief Fonction pour écrire le fichier wood.json dans le port sériel
- * @author Olivier David Laplante
+ * @brief Function to write the wood.json file in the serial port
+ * @author Skkeye
  * 
- * @param bPurge - Booléen pour supprimer le fichier après l'avoir écrit
+ * @param bPurge - If the file should be deleted after being dumped
  */
 void vDumpWood(bool bPurge)
 {

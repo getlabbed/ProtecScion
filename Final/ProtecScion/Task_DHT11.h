@@ -1,12 +1,12 @@
 /**
  * @file Task_DHT11.h
- * @author Yanick Labelle (getlabbed@proton.me)
- * @brief Fichier d'en-tête du fichier Task_DHT11.cpp
- * @note restrictions: Pour type de carte ESP32 Feather
+ * @author Skkeye
+ * @brief Header file of the Task_DHT11.cpp file
+ * @note restrictions: ESP32 Feather board type
  * 
  * @version 1.0
- * @date 2023-05-08 - Entrée initiale du code
- * @date 2023-05-18 - Entrée finale du code 
+ * @date 2023-05-08 - Initial code entry
+ * @date 2023-05-18 - Final code entry
  * 
  */
 
@@ -14,5 +14,5 @@
 
 #define PIN_DHT11 33
 
-// Définition des tâches
+// Task definition
 void vTaskDHT11(void *pvParameters);

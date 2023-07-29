@@ -1,18 +1,18 @@
 /**
  * @file Task_LCD.cpp
- * @author Olivier David Laplante (skkeye@gmail.com)
- * @brief Fichier d'implémentation de la tâche d'asservissement pour contrôler l'écran LCD
- * @note restrictions: Pour type de carte ESP32 Feather
+ * @author Skkeye
+ * @brief Implementaion file of the control task to control the LCD screen
+ * @note restrictions: ESP32 Feather board type
  * @version 1.0
- * @date 2023-05-07 - Entrée initiale du code
- * @date 2023-05-18 - Entrée finale du code
+ * @date 2023-05-07 - Initial code entry
+ * @date 2023-05-18 - Final code entry
  * 
  */
 
 #include "Task_LCD.h"
 #include "Adafruit_LiquidCrystal.h"
 
-// Variables globales
+// Global variables
 TimerHandle_t xTimerLCDLine[4];
 
 LCDBuffer_t buffer;
@@ -27,7 +27,7 @@ struct lineNumbers
 
 void vTaskLCD(void *pvParameters)
 {
-  // Initialisation des timers
+  // Timer initializations
   xTimerLCDLine[0] = xTimerCreate("TimerLCDLine1", 1000 / portTICK_PERIOD_MS, pdFALSE, NULL, resetLine0);
   xTimerLCDLine[1] = xTimerCreate("TimerLCDLine2", 1000 / portTICK_PERIOD_MS, pdFALSE, NULL, resetLine1);
   xTimerLCDLine[2] = xTimerCreate("TimerLCDLine3", 1000 / portTICK_PERIOD_MS, pdFALSE, NULL, resetLine2);
@@ -35,10 +35,10 @@ void vTaskLCD(void *pvParameters)
 
   xSemaphoreTake(xSemaphoreI2C, portMAX_DELAY);
 
-  // Connection via I2c, DAT: Broche 3, CLK: Broche 5
+  // Connection via I2c, DAT: Pin 3, CLK: Pin 5
   Adafruit_LiquidCrystal tempLCD(LCD_I2C_ADDR, &xWireBus);
 
-  // Laisser le temps a l'écran d'initialiser
+  // Let the screen initialize
   vTaskDelay(100 / portTICK_PERIOD_MS);
   lcd = &tempLCD;
 
@@ -51,10 +51,10 @@ void vTaskLCD(void *pvParameters)
 
   while (1)
   {
-    // Attendre de recevoir une commande dans la file
+    // Wait to receive a command in the queue
     if (!xQueueReceive(xQueueLCD, &cmdBuffer, portMAX_DELAY)) continue;
 
-    // Prendre le sémaphore pour avoir accès à l'écran LCD
+    // Take the semaphore to have access to the LCD screen
     while (!xSemaphoreTake(xSemaphoreI2C, portMAX_DELAY)) vTaskDelay(10 / portTICK_PERIOD_MS);
 
     // if the duration is 0, we don't need to set a timer
@@ -107,7 +107,7 @@ void resetLine(int line)
   }
 }
 
-// On ne peux pas passer de paramètre à une fonction appelée par un timer
+// We can't pass a parameter to a function called by a timer
 void resetLine0(void*) {resetLine(0);}
 void resetLine1(void*) {resetLine(1);}
 void resetLine2(void*) {resetLine(2);}

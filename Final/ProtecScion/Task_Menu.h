@@ -1,11 +1,11 @@
  /**
  * @file Task_Menu.h
- * @author Olivier David Laplante (skkeye@gmail.com)
- * @brief Fichier d'en-tête du fichier Task_Menu.cpp.
- * @note restrictions: Pour type de carte ESP32 Feather
+ * @author Skkeye
+ * @brief Header file for Task_Menu.cpp
+ * @note restrictions: ESP32 Feather board type
  * @version 1.0
- * @date 2023-05-13 - Entrée initiale du code
- * @date 2023-05-18 - Entrée finale du code 
+ * @date 2023-05-13 - Initial code entry
+ * @date 2023-05-18 - Final code entry
  * 
  */
 

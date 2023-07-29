@@ -1,11 +1,11 @@
  /**
  * @file Task_SoundSensor.cpp
- * @author Yanick Labelle (getlabbed@proton.me)
- * @brief Code permettant de gérer le capteur de son.
- * @note restrictions: Pour type de carte ESP32 Feather
+ * @author Skkeye's coleague
+ * @brief Code used to manage the sound sensor.
+ * @note restrictions: ESP32 Feather board type
  * @version 1.0
- * @date 2023-05-12 - Entrée initiale du code
- * @date 2023-05-18 - Entrée finale du code 
+ * @date 2023-05-12 - Initial code entry
+ * @date 2023-05-18 - Final code entry 
  * 
  */
 
@@ -16,19 +16,19 @@ byte rowPins[KEYPAD_ROWS] = {PIN_KEYPAD_1, PIN_KEYPAD_2, PIN_KEYPAD_3, PIN_KEYPA
 byte colPins[KEYPAD_COLS] = {PIN_KEYPAD_5, PIN_KEYPAD_6, PIN_KEYPAD_7};
 
 /**
- * @brief Tâche permettant de gérer le clavier matriciel.
+ * @brief Task used to manage the keypad.
  * 
- * @param pvParameters - Non utilisé
+ * @param pvParameters - Not used
  */
 void vTaskKeypad(void *pvParameters)
 {
-	char key = NO_KEY; // Initialiser la variable de la touche à aucune touche
+	char key = NO_KEY; // Init the key variable to no key
 	Keypad kp = Keypad(makeKeymap(keys), rowPins, colPins, KEYPAD_ROWS, KEYPAD_COLS);
 
 	while (1)
 	{
-		while((key = kp.getKey()) == NO_KEY) vTaskDelay(pdMS_TO_TICKS(10)); // Attendre pour une touche
-		vTaskDelay(1);																                      // Très important
-		xQueueSend(xQueueKeypad, &key, portMAX_DELAY);                      // Envoyer la touche dans la file
+		while((key = kp.getKey()) == NO_KEY) vTaskDelay(pdMS_TO_TICKS(10)); // Wait for a key to be pressed
+		vTaskDelay(1);																                      // Very important 
+		xQueueSend(xQueueKeypad, &key, portMAX_DELAY);                      // Send the key to the queue
 	}
 }

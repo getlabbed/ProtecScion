@@ -1,11 +1,11 @@
  /**
  * @file Task_Menu.cpp
- * @author Olivier David Laplante (skkeye@gmail.com)
- * @brief Code permettant de gérer le menu de l'application.
- * @note restrictions: Pour type de carte ESP32 Feather
+ * @author Skkeye
+ * @brief Program used to manage the application menu.
+ * @note restrictions: ESP32 Feather board type
  * @version 1.0
- * @date 2023-05-13 - Entrée initiale du code
- * @date 2023-05-18 - Entrée finale du code 
+ * @date 2023-05-13 - Initial code entry
+ * @date 2023-05-18 - Final code entry 
  * 
  */
 
@@ -13,23 +13,23 @@
 #include "Task_IOFlash.h"
 #include "yasm.h"
 
-unsigned int uiMode = 0; // Mode sélectionné | 0: Rien, 1: Opération, 2: Apprendre, 3: Manuel, 4: Modifier
-String sChoice;          // Choix de l'utilisateur
-char cChoice;            // choix de l'utilisateur
-Wood_t xWood;            // Bois sélectionné
-YASM xStateMachine;      // Machine à état
+unsigned int uiMode = 0; // Mode selected | 0: Nothing, 1: Operation, 2: Learning, 3: Manual, 4: Modify
+String sChoice;          // User choice
+char cChoice;            // User choice
+Wood_t xWood;            // Selected wood
+YASM xStateMachine;      // State machine
 
-// Tache principale
+// Main task
 void vTaskMenu(void *pvParameters)
 {
-	xStateMachine.next(xStateModeSel); // Initialiser la machine à état
+	xStateMachine.next(xStateModeSel); // Initialize the state machine
 	vTaskDelay(pdMS_TO_TICKS(1000));
-	vUpdateScreen();                   // Mettre à jour l'écran
+	vUpdateScreen();                   // Update the screen
 	while (true)
 	{
-		xQueueReceive(xQueueKeypad, &cChoice, portMAX_DELAY); // Attendre une touche
-		xStateMachine.run();                                  // Exécuter la machine à état
-		vUpdateScreen();                                      // Mettre à jour l'écran
+		xQueueReceive(xQueueKeypad, &cChoice, portMAX_DELAY); // Wait for a key to be pressed
+		xStateMachine.run();                                  // Execute the state machine
+		vUpdateScreen();                                      // Update the screen
 		vTaskDelay(100 / portTICK_PERIOD_MS);
 	}
 }
@@ -66,11 +66,11 @@ void xStateAdminPassword()
 
 void xStateAdminMode()
 {
-	if (cChoice == '1') // Imprimer le journal
+	if (cChoice == '1') // Dump the log
 	{
 		vSendLog(DUMP,"");
 	}
-	else if (cChoice == '2') // Imprimer le journal et supprimer les fichiers (xWood et log)
+	else if (cChoice == '2') // Dump the log and delete the files (xWood and log)
 	{
 		vSendLog(DUMP,"PURGE");
 	}
@@ -125,16 +125,16 @@ void xStateAdminMode()
 	}
 }
 
-// sélection du mode
+// Mode selection
 void xStateModeSel()
 {
 	vSendLog(INFO, "Menu: Executed xStateModeSel");
-	if (cChoice >= '1' && cChoice <= '4') // Si le mode choisit est valide
+	if (cChoice >= '1' && cChoice <= '4') // If the selected mode is valid
 	{
-		uiMode = cChoice - '0';             // Convertir le choix en entier
+		uiMode = cChoice - '0';             // Convert the choice to an integer
 		// ALWAYS GO TO WOOD SELECT
-		xStateMachine.next(xStateWoodSel);  // Aller à la sélection du bois
-		sChoice = "";                       // Réinitialiser le choix
+		xStateMachine.next(xStateWoodSel);  // GOTO WOOD SELECT
+		sChoice = "";                       // Reset the choice
 	}
 	else if (cChoice == '*') 
 	{
@@ -146,7 +146,7 @@ void xStateModeSel()
 	xQueueSend(xQueueLED, &led_state, 0);
 }
 
-// sélection du bois
+// Wood selection
 void xStateWoodSel()
 {
 	vSendLog(INFO, "Menu: Executed xStateWoodSel");
@@ -166,7 +166,7 @@ void xStateWoodSel()
 		xWood.code = sChoice.toInt();
 		if (uiMode <= 2)
 		{
-			xQueueSend(xQueueApprentissageControl, &(xWood.code), portMAX_DELAY); // TBD
+			xQueueSend(xQueueLearningControl, &(xWood.code), portMAX_DELAY); // TBD
 			xQueueSend(xQueueRequestWood, &(xWood.code), portMAX_DELAY);
 			xQueueReceive(xQueueReadWood, &xWood, portMAX_DELAY);
 			unsigned int uiSawSpeed = (xWood.sawSpeed * 4096) / 100;
@@ -191,7 +191,7 @@ void xStateWoodSel()
 	}
 }
 
-// Édition de la vitesse de la scie
+// Saw speed editing
 void xStateEditSawSpeed()
 {
 	vSendLog(INFO, "Menu: Executed xStateEditSawSpeed");
@@ -219,7 +219,7 @@ void xStateEditSawSpeed()
 	}
 }
 
-// Édition de la vitesse d'avancement
+// Feed rate editing
 void xStateEditFeedRate()
 {
 	vSendLog(INFO, "Menu: Executed xStateEditFeedRate");
@@ -249,7 +249,7 @@ void xStateEditFeedRate()
 	}
 }
 
-// Mode actif
+// Active state
 void xStateActive()
 {
 	if (cChoice != 0)
@@ -259,56 +259,56 @@ void xStateActive()
 		xQueueSend(xQueueLED, &led_state, 0);
 	}
 	vSendLog(INFO, "Menu: Executed xStateActive");
-	int flag = uiMode - 2; // -1 = Mode opération, 0 = Mode apprentissage
+	int flag = uiMode - 2; // -1 = Operation mode, 0 = Learning mode
 	unsigned int uiZero = 0;
-	xQueueSend(xQueueApprentissageControl, &flag, portMAX_DELAY); // Arrêter la lecture de la fDistance
-	xQueueSend(xQueueSawSpeed, &uiZero, portMAX_DELAY); // Arrêter la scie
+	xQueueSend(xQueueLearningControl, &flag, portMAX_DELAY); // Stop reading the distance
+	xQueueSend(xQueueSawSpeed, &uiZero, portMAX_DELAY); // Stop the saw
 	xStateMachine.next(xStateModeSel);
 }
 
-// Fonction qui permet de mettre à jour l'écran
+// Function that updates the screen
 void vUpdateScreen()
 {
 	if (xStateMachine.isInState(xStateModeSel))
 	{
-		vSendLCDCommand("1. Mode Operation  ", 0, 0);
-		vSendLCDCommand("2. Mode Apprendre  ", 1, 0);
-		vSendLCDCommand("3. Mode Manuel     ", 2, 0);
-		vSendLCDCommand("4. Mode Modifier   ", 3, 0);
+		vSendLCDCommand("1. Operation Mode  ", 0, 0);
+		vSendLCDCommand("2. Learning Mode   ", 1, 0);
+		vSendLCDCommand("3. Manual Mode     ", 2, 0);
+		vSendLCDCommand("4. Modify Mode     ", 3, 0);
 	}
 	else if (xStateMachine.isInState(xStateWoodSel))
 	{
-		vSendLCDCommand("== Choix du Bois ==", 0, 0);
-		vSendLCDCommand("ID suivi du Numero:", 1, 0);
+		vSendLCDCommand("==  Wood Choice  ==", 0, 0);
+		vSendLCDCommand("ID then number:    ", 1, 0);
 		vSendLCDCommand((sChoice == "") ? "                   " : sChoice, 2, 0);
-		vSendLCDCommand("\"*\" Pour confirmer ", 3, 0);
+		vSendLCDCommand("\"*\" To Confirm     ", 3, 0);
 	}
 	else if (xStateMachine.isInState(xStateEditSawSpeed))
 	{
-		vSendLCDCommand((uiMode == 3) ? "==  MODE MANUEL  ==" : "== MODE MODIFIER ==", 0, 0);
-		vSendLCDCommand("Vitesse de la Scie:", 1, 0);
+		vSendLCDCommand((uiMode == 3) ? "==  MANUAL MODE  ==" : "==  MODIFY MODE  ==", 0, 0);
+		vSendLCDCommand("Saw Speed:         ", 1, 0);
 		vSendLCDCommand((sChoice == "") ? "                   " : sChoice, 2, 0);
-		vSendLCDCommand("\"*\" Pour confirmer ", 3, 0);
+		vSendLCDCommand("\"*\" To Confirm     ", 3, 0);
 	}
 	else if (xStateMachine.isInState(xStateEditFeedRate))
 	{
-		vSendLCDCommand((uiMode == 3) ? "==  MODE MANUEL  ==" : "== MODE MODIFIER ==", 0, 0);
-		vSendLCDCommand("Vitesse du Bois:   ", 1, 0);
+		vSendLCDCommand((uiMode == 3) ? "==  MANUAL MODE  ==" : "==  MODIFY MODE  ==", 0, 0);
+		vSendLCDCommand("Wood speed:        ", 1, 0);
 		vSendLCDCommand((sChoice == "") ? "                   " : sChoice, 2, 0);
-		vSendLCDCommand("\"*\" Pour confirmer ", 3, 0);
+		vSendLCDCommand("\"*\" To Confirm     ", 3, 0);
 	}
 	else if (xStateMachine.isInState(xStateActive))
 	{
-		vSendLCDCommand((uiMode == 1) ? "==   OPERATION   ==" : "==   APPRENDRE   ==", 0, 0);
+		vSendLCDCommand((uiMode == 1) ? "==   OPERATION   ==" : "==   LEARNING    ==", 0, 0);
 		vSendLCDCommand("                   ", 1, 0);
 		vSendLCDCommand("                   ", 2, 0);
 		vSendLCDCommand("                   ", 3, 0);
 	}
 	else if (xStateMachine.isInState(xStateAdminMode))
 	{
-		vSendLCDCommand("==   MODE ADMIN  ==", 0, 0);
-		vSendLCDCommand("1. Journalisation  ", 1, 0);
-		vSendLCDCommand("2. Remise a uiZero   ", 2, 0);
+		vSendLCDCommand("==   ADMIN MODE  ==", 0, 0);
+		vSendLCDCommand("1. Logging         ", 1, 0);
+		vSendLCDCommand("2. Factory Reset   ", 2, 0);
 		vSendLCDCommand("3.                 ", 3, 0);
 	}
 }

@@ -1,12 +1,12 @@
 /**
  * @file Task_Apprentissage.cpp
- * @author Yanick Labelle (getlabbed@proton.me)
- * @brief Code permettant de gérer le capteur de Distance infrarouge.
- * @note restrictions: Pour type de carte ESP32 Feather
+ * @author Skkeye's coleague
+ * @brief Code used to manage the infrared distance sensor.
+ * @note restrictions: ESP32 Feather board type
  * 
  * @version 1.0
- * @date 2023-04-30 - Entrée initiale du code
- * @date 2023-05-18 - Entrée finale du code 
+ * @date 2023-04-30 - Initial code entry
+ * @date 2023-05-18 - Final code entry
  * 
  */
 
@@ -15,9 +15,9 @@
 #include <Filters.h>
 
 /**
- * @brief Tâche permettant de gérer le capteur de Distance infrarouge.
+ * @brief Task used to manage the infrared distance sensor.
  * 
- * @param pvParameters - Non utilisé
+ * @param pvParameters - Not used
  */
 void vTaskApprentissage(void *pvParameters)
 {
@@ -42,7 +42,7 @@ void vTaskApprentissage(void *pvParameters)
 	double dSawSpeedSum = 0;
 	long int liSawSpeedCount = 0;
 
-	// Initialiser le capteur
+	// Init the sensor
 
 	pinMode(PIN_IR_SENSOR, INPUT);
 
@@ -55,42 +55,42 @@ void vTaskApprentissage(void *pvParameters)
 		xWood.code = 0;
 		xQueueReceive(xQueueApprentissageControl, &(xWood.code), portMAX_DELAY);
     
-    // Démarrer la tâche si le flag est vrai
+    // Start the task if the flag is true
 		if (xWood.code == 0) continue;
 		iControlFlag = 1;
 		while (iControlFlag == 1)
 		{
-			int iSensorValue = analogRead(PIN_IR_SENSOR); // Lire la valeur du capteur
+			int iSensorValue = analogRead(PIN_IR_SENSOR); // Read the sensor value
 
-			// S'assurer que la valeur du capteur n'est pas égale à 11 pour éviter une division par zéro
+			// Make sure the sensor value is not equal to 11 to avoid a division by zero
 			if (iSensorValue != 11)
 			{
 				float fDistance = convertToDistance(iSensorValue);
 
-				// Calculer le temps écoulé depuis la dernière itération
+				// Calculate the time elapsed since the last iteration
 				uiCurrTime = millis();
 				fDeltaTime = (uiCurrTime - uiPrevTime) / 1000.0;
 
-				// Filtrer la distance
+				// Filter the distance value
 				float fFilteredDistance = lowpassFilter.get(fDistance, fDeltaTime);
 
-				// S'assurer que la distance est entre les limites spécifiées
+				// Make sure the distance is between the specified limits
 				if (fFilteredDistance >= LOW_LIMIT && fFilteredDistance <= HIGH_LIMIT)
 				{
 					fCurrDistance = fFilteredDistance;
 
 					fSpeed = abs(fCurrDistance - fPrevDistance) / fDeltaTime;
 
-					// Mettre à jour la somme et le compteur de vitesse pour le calcul de la moyenne
+					// Update the sum and the speed counter for the averaging
 					fSpeedSum += fSpeed;
 					iSpeedCount++;
 
 					if (uiCurrTime - lastAvgTime >= AVG_INTERVAL_TIME)
 					{
 						fAvgFeedRate = fSpeedSum / iSpeedCount;
-						vSendLog(INFO, "IR: Average Speed: " + String(fAvgFeedRate) + " unitees/s");
+						vSendLog(INFO, "IR: Average Speed: " + String(fAvgFeedRate) + " units/s");
 
-						// Mettre à jour les valeurs de la moyenne
+						// Update the average
 						lastAvgTime = uiCurrTime;
 						fSpeedSum = 0;
 						iSpeedCount = 0;
@@ -100,11 +100,11 @@ void vTaskApprentissage(void *pvParameters)
 				}
 			}
 
-			// Mettre à jour les valeurs précédentes
+			// Update the previous values
 			fPrevDistance = fCurrDistance;
 			uiPrevTime = uiCurrTime;
 
-			// Mettre à jour les données sur l'écran
+			// Update the data on the screen
 			if (millis() - uiPrevTime2 >= 500)
 			{
 				uiPrevTime2 = millis();
@@ -112,7 +112,7 @@ void vTaskApprentissage(void *pvParameters)
 				xQueueSend(xQueueAmbiant, &(xWood.code), 0);
 			}
 
-			// Délai de 50ms pour assurer la stabilité du capteur
+			// 50ms delay to ensure the stability of the sensor
 			vTaskDelay(50 / portTICK_PERIOD_MS);
 
 			if (!xQueueReceive(xQueueApprentissageControl, &iControlFlag, 0)) continue;
@@ -122,8 +122,8 @@ void vTaskApprentissage(void *pvParameters)
 			xWood.code = xWood.code;
 			xWood.feedRate = fAvgFeedRate;
 			xWood.sawSpeed = (avgSawSpeed * 100) / 4095;
-			vSendLog(INFO, "IR: Saw Speed: " + String(avgSawSpeed) + " unites/s");
-			vSendLog(INFO, "IR: Feed Rate: " + String(fAvgFeedRate) + " unites/s");
+			vSendLog(INFO, "IR: Saw Speed: " + String(avgSawSpeed) + " units/s");
+			vSendLog(INFO, "IR: Feed Rate: " + String(fAvgFeedRate) + " units/s");
 
 			xQueueSend(xQueueWriteWood, &xWood, portMAX_DELAY);
 		}
@@ -131,14 +131,14 @@ void vTaskApprentissage(void *pvParameters)
 }
 
 /**
- * @brief Convertir la valeur du capteur en fDistance
+ * @brief Convert the sensor value to distance
  * 
- * @param iSensorValue - Valeur du capteur
- * @return float - Distance en cm
+ * @param iSensorValue - Sensor value
+ * @return float - Distance in cm
  */
 float convertToDistance(int iSensorValue)
 {
-	// Formule de conversion de la fDistance pour le capteur SHARP GP2D2F
+	// Conversion formula for the SHARP GP2D2F sensor
 	float fDistance = 2076.0 / (iSensorValue - 11.0);
 	return fDistance;
 }

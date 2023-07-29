@@ -1,12 +1,12 @@
 /**
  * @file Task_AsservissementScie.cpp
- * @author Olivier David Laplante (skkeye@gmail.com)
- * @brief Fichier d'implémentation de la tâche d'asservissement de la scie (PID)
- *        et de la detection des KickBacks
- * @note restrictions: Pour type de carte ESP32 Feather
+ * @author Skkeye
+ * @brief Implementations file of the task of the saw (PID) servo loop 
+ *        and KickBacks detection
+ * @note restriction: ESP32 Feather board type
  * @version 1.0
- * @date 2023-04-30 - Entrée initiale du code
- * @date 2023-05-18 - Entrée finale du code
+ * @date 2023-04-30 - Initial code entry
+ * @date 2023-05-18 - Final code entry
  * 
  */
 
@@ -20,15 +20,15 @@ double dLastInputs[4] = {0,0,0,0};
 double dLastOutput = 0;
 
 /**
- * @brief Tache d'asservissement de la scie (PID) et de la detection des KickBacks
- * @author Olivier David Laplante
+ * @brief Saw Servo Task (PID) and KickBacks detection
+ * @author Skkeye
  * 
- * @param pvParameters - Non utilisé
+ * @param pvParameters - Not used
  */
 void vTaskAsservissementScie(void *pvParameters) {
   // local variables
-  MotorState_t xMotorState = OFF; // pas pour prod
-  unsigned int uiTarget = PID_INITIAL_TARGET; // etre capable de setter pour prod
+  MotorState_t xMotorState = OFF; // not for prod
+  unsigned int uiTarget = PID_INITIAL_TARGET; // Need to be able to set for prod
   // PID instance
   PID_v2 xPID(PID_KP, PID_KI, PID_KD, PID::Direct);
 
@@ -111,14 +111,14 @@ void vTaskAsservissementScie(void *pvParameters) {
 }
 
 /**
- * @brief Fonction qui detecte les changements rapides de la vitesse de la scie
- * @author Olivier David Laplante
- * @note Cette fonction est utilisee pour detecter les KickBacks
+ * @brief Detection function of sudden changes in the speed of the saw
+ * @author Skkeye
+ * @note This function is used to detect KickBacks
  * 
- * @param cdInput - Valeur de la vitesse de la scie
- * @param iThreshold - Seuil de detection
- * @return true - Si un changement rapide est detecte
- * @return false - Si aucun changement rapide n'est detecte
+ * @param cdInput - Saw speed value
+ * @param iThreshold - Detecting threshold
+ * @return true - If a fast change is detected
+ * @return false - If no fast change is detected
  */
 bool bIsFastChange(double cdInput, int iThreshold)
 {

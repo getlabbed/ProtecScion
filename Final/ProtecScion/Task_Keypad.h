@@ -1,11 +1,11 @@
  /**
  * @file Task_SoundSensor.h
- * @author Yanick Labelle (getlabbed@proton.me)
- * @brief Fichier d'en-tête du fichier Task_SoundSensor.cpp
- * @note restrictions: Pour type de carte ESP32 Feather
+ * @author Skkeye
+ * @brief Header file of the Task_SoundSensor.cpp file
+ * @note restrictions: ESP32 Feather board type
  * @version 1.0
- * @date 2023-05-12 - Entrée initiale du code
- * @date 2023-05-18 - Entrée finale du code 
+ * @date 2023-05-12 - Initial code entry
+ * @date 2023-05-18 - Final code entry 
  * 
  */
 
@@ -13,7 +13,7 @@
 
 void vTaskKeypad(void *pvParameters);
 
-// Définition des broches du clavier
+// Keypad pin definitions
 #define PIN_KEYPAD_1 21
 #define PIN_KEYPAD_2 17
 #define PIN_KEYPAD_3 16
@@ -22,11 +22,11 @@ void vTaskKeypad(void *pvParameters);
 #define PIN_KEYPAD_6 5
 #define PIN_KEYPAD_7 4
 
-// Définition du nombre de lignes et de colonnes du clavier
+// Rows and columns of the keypad
 #define KEYPAD_ROWS 4
 #define KEYPAD_COLS 3
 
-// Définition de la disposition des touches du clavier
+// Keypad keys definition
 const char keys[KEYPAD_ROWS][KEYPAD_COLS] = {
   { '1', '2', '3' },
   { '4', '5', '6' },

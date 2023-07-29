@@ -1,12 +1,12 @@
 /**
  * @file Task_IOFlash.h
- * @author Olivier David Laplante (skkeye@gmail.com)
- * @author Yanick Labelle (getlabbed@proton.me)
- * @brief Fichier d'en-tête du fichier Task_IOFlash.cpp
- * @note restrictions: Pour type de carte ESP32 Feather
+ * @author Skkeye
+ * @author Skkeye's coleague
+ * @brief Header file of Task_IOFlash.cpp
+ * @note restrictions: ESP32 Feather board type
  * @version 1.0
- * @date 2023-04-30 - Entrée initiale du code
- * @date 2023-05-18 - Entrée finale du code
+ * @date 2023-04-30 - Initial code entry
+ * @date 2023-05-18 - Final code entry
  * 
  */
 
